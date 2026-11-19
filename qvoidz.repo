@@ -1,0 +1,7 @@
+[qvoidz]
+name=qvoidz Fedora RPM Repository
+baseurl=https://qvoidz.github.io/rpm-packages/x86_64/
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+metadata_expire=1h
