@@ -6,8 +6,9 @@ Personal Fedora RPM packaging and release-tracking repository.
 
 | Package | Upstream | Packaging status |
 |---|---|---|
-| fcitx5-wetypex | https://github.com/panxuc/fcitx5-wetypex | Upstream already publishes Fedora RPMs; local COPR recipe is being prepared after auditing its RPM metadata and build/install scripts. |
-| flclash | https://github.com/chen08209/FlClash | Upstream already publishes Fedora RPMs; local COPR recipe is being prepared after auditing its RPM metadata and build/install scripts. |
+| fcitx5-wetypex | https://github.com/panxuc/fcitx5-wetypex | Repackages the upstream RPM for COPR. |
+| flclash | https://github.com/chen08209/FlClash | Repackages the upstream RPM for COPR. |
+| wechat | https://weixin.qq.com/ | Repackages Tencent's official x86_64 RPM; version and SHA-256 are pinned in the SPEC. |
 
 ## Policy
 
