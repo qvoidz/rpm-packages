@@ -49,7 +49,7 @@ install it separately using the upstream setup command and accept its license.
 mkdir -p %{buildroot}
 cd %{buildroot}
 rpm2cpio %{SOURCE0} | cpio -idm --quiet --no-absolute-filenames
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%P\n' | sort > %{_builddir}/%{name}-filelist
+find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' | sort > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
