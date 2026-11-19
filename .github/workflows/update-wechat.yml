@@ -1,0 +1,125 @@
+name: Check WeChat upstream
+
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-wechat
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install RPM tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
+      - name: Detect stable upstream version
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            https://raw.githubusercontent.com/flathub/com.tencent.WeChat/master/com.tencent.WeChat.metainfo.xml \
+            -o /tmp/wechat.metainfo.xml
+
+          VERSION="$(python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse("/tmp/wechat.metainfo.xml").getroot()
+          releases = root.find("releases")
+          if releases is None:
+              raise SystemExit("No releases metadata found")
+          versions = [r.attrib["version"] for r in releases.findall("release") if r.attrib.get("version")]
+          if not versions:
+              raise SystemExit("No release versions found")
+          print(versions[0])
+          PY
+          )"
+
+          CURRENT="$(sed -n 's/^Version:[[:space:]]*//p' wechat/wechat.spec | head -n1)"
+          echo "Upstream stable version: $VERSION"
+          echo "Current packaged version: $CURRENT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          if [ "$VERSION" = "$CURRENT" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download and verify official Tencent RPM
+        if: steps.upstream.outputs.changed == 'true'
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.rpm"
+          curl -fL --retry 3 --retry-delay 5 "$URL" -o /tmp/WeChatLinux_x86_64.rpm
+
+          RPM_VERSION="$(rpm -qp --qf '%{VERSION}' /tmp/WeChatLinux_x86_64.rpm)"
+          RPM_ARCH="$(rpm -qp --qf '%{ARCH}' /tmp/WeChatLinux_x86_64.rpm)"
+          if [ "$RPM_VERSION" != "${{ steps.upstream.outputs.version }}" ] || [ "$RPM_ARCH" != "x86_64" ]; then
+            echo "Downloaded Tencent RPM metadata does not match the detected stable version."
+            echo "Expected: ${{ steps.upstream.outputs.version }} x86_64; got: $RPM_VERSION $RPM_ARCH"
+            exit 1
+          fi
+
+          SHA256="$(sha256sum /tmp/WeChatLinux_x86_64.rpm | cut -d' ' -f1)"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Update SPEC
+        if: steps.upstream.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.upstream.outputs.version }}
+          SHA256: ${{ steps.package.outputs.sha256 }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+
+          path = Path("wechat/wechat.spec")
+          text = path.read_text()
+          version = os.environ["VERSION"]
+          sha256 = os.environ["SHA256"]
+
+          text, version_count = re.subn(r"(?m)^Version:[ \t]*.*$", f"Version:        {version}", text, count=1)
+          if version_count != 1:
+              raise SystemExit("Could not update Version field")
+
+          text, hash_count = re.subn(
+              r'(?m)^(echo ")[0-9a-f]{64}(  %\{SOURCE0\}" \| sha256sum -c -)$',
+              lambda m: m.group(1) + sha256 + m.group(2),
+              text,
+              count=1,
+          )
+          if hash_count != 1:
+              raise SystemExit("Could not update pinned SHA256")
+
+          text = re.sub(
+              r"(?m)^\* .* COPR Builder <copr@example.invalid> - .*\n- Repackage the official Tencent WeChat RPM for COPR$",
+              f"* $(date -u '+%a %b %d %Y') COPR Builder <copr@example.invalid> - {version}-1\n- Update to upstream WeChat {version}",
+              text,
+              count=1,
+          )
+          path.write_text(text)
+          PY
+
+      - name: Commit updated SPEC
+        if: steps.upstream.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add wechat/wechat.spec
+          git commit -m "wechat: update to ${{ steps.upstream.outputs.version }}"
+          git push
