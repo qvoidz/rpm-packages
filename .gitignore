@@ -1,0 +1,5 @@
+# Session/project data
+.workbuddy/
+
+# Local sync working directory
+public/

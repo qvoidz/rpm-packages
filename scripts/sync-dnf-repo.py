@@ -66,6 +66,20 @@ def sync_wechat():
     target.rename(PKGDIR / f"{name}-{version}-{release_no}.{arch}.rpm")
     print(f"{name} {version}-{release_no}.{arch}")
 
+def sync_workbuddy():
+    api = "https://copilot.tencent.com/v2/update?platform=workbuddy-linux-x64-rpm"
+    release = json.loads(request(api))
+    url = release.get("url", "")
+    if not url.startswith("https://download.codebuddy.cn/") or not url.endswith(".rpm"):
+        raise RuntimeError(f"Unexpected WorkBuddy download URL: {url}")
+    target = PKGDIR / "workbuddy-upstream.rpm"
+    download(url, target)
+    name, version, release_no, arch = rpm_info(target)
+    if name != "workbuddy":
+        raise RuntimeError(f"Unexpected WorkBuddy RPM package name: {name}")
+    target.rename(PKGDIR / f"{name}-{version}-{release_no}.{arch}.rpm")
+    print(f"{name} {version}-{release_no}.{arch} from the official WorkBuddy update API")
+
 def main():
     PKGDIR.mkdir(parents=True, exist_ok=True)
     # Keep only the currently published x86_64 build of each application.
@@ -74,6 +88,7 @@ def main():
     sync_release("chen08209/FlClash", r"FlClash-dev-[0-9][^/]*-linux-amd64\.rpm", "flclash")
     sync_release("panxuc/fcitx5-wetypex", r"fcitx5-wetypex-[0-9][^/]*\.x86_64\.rpm", "fcitx5-wetypex")
     sync_wechat()
+    sync_workbuddy()
     (ROOT / "index.html").write_text(
         "<!doctype html><meta charset='utf-8'><title>qvoidz Fedora RPM Repository</title>"
         "<h1>qvoidz Fedora RPM Repository</h1><p>DNF repository for x86_64 Fedora systems.</p>"

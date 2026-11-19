@@ -1,11 +1,14 @@
 %global debug_package %{nil}
+# Upstream release tags look like v<version>-<upstream_rel>, e.g. v3.0.1.684-9.
+# scripts/check-updates.py keeps both globals in sync with the latest tag.
+%global upstream_rel 9
 Name:           fcitx5-wetypex
 Version:        3.0.1.684
-Release:        9%{?dist}
+Release:        %{upstream_rel}%{?dist}
 Summary:        WeTypeX input method adapter for Fcitx5
 License:        GPL-3.0-or-later
 URL:            https://github.com/panxuc/fcitx5-wetypex
-Source0:        https://github.com/panxuc/fcitx5-wetypex/releases/download/v%{version}-9/fcitx5-wetypex-%{version}-9.x86_64.rpm
+Source0:        https://github.com/panxuc/fcitx5-wetypex/releases/download/v%{version}-%{upstream_rel}/fcitx5-wetypex-%{version}-%{upstream_rel}.x86_64.rpm
 
 BuildRequires:  cpio
 BuildRequires:  rpm

@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 Name:           wechat
 Version:        4.1.13.26
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        WeChat desktop client from Tencent
 License:        LicenseRef-Tencent-Weixin-Software-and-Service-License
 URL:            https://weixin.qq.com/
@@ -12,16 +12,17 @@ BuildRequires:  cpio
 BuildRequires:  coreutils
 BuildRequires:  rpm
 
-# Keep the upstream binary artifact pinned even though Tencent uses a
-# version-independent download URL.
+# Source0 is Tencent's version-independent download URL: its payload changes
+# with every WeChat release, so the bytes are not hash-pinned here.
+# scripts/check-updates.py sniffs the newest version directly from the RPM
+# header (HTTP Range request) and bumps Version automatically.
 %description
 WeChat desktop client for Linux, distributed by Tencent.
 This package repackages the official upstream RPM without rebuilding
 or modifying the application binaries.
 
 %prep
-echo "%{SOURCE0}"
-echo "919461e37f80abb277ec0d7acde67ea1e64aaaf2472b4b1d954f3f1f76a91d02  %{SOURCE0}" | sha256sum -c -
+echo "Source0 tracks Tencent's rolling download; no hash pin applied."
 
 %build
 :
@@ -45,5 +46,6 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
-* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 4.1.13.26-1
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 4.1.13.26-2
+- Drop the pinned SHA-256 so the rolling Tencent download can be tracked
 - Repackage the official Tencent WeChat RPM for COPR
