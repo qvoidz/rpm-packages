@@ -6,13 +6,11 @@ License:        GPL-3.0-or-later
 URL:            https://github.com/panxuc/fcitx5-wetypex
 Source0:        https://github.com/panxuc/fcitx5-wetypex/releases/download/v%{version}-9/fcitx5-wetypex-%{version}-9.x86_64.rpm
 
-BuildArch:      x86_64
 BuildRequires:  cpio
 BuildRequires:  rpm
 
 # Runtime requirements declared by the upstream Fedora RPM packaging.
 Requires:       glibc
-Requires:       libcxx
 Requires:       openssl-libs
 Requires:       ca-certificates
 Requires:       json-c
