@@ -1,3 +1,4 @@
+%global debug_package %{nil}
 Name:           flclash
 Version:        0.9.4
 Release:        1%{?dist}
@@ -53,3 +54,7 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 %files -f %{_builddir}/%{name}-filelist
+
+%changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 0.9.4-1
+- Repackage upstream FlClash RPM for COPR
