@@ -4,7 +4,7 @@ Release:        9%{?dist}
 Summary:        WeTypeX input method adapter for Fcitx5
 License:        GPL-3.0-or-later
 URL:            https://github.com/panxuc/fcitx5-wetypex
-Source0:        https://github.com/panxuc/fcitx5-wetypex/releases/download/v%{version}-%{release}/fcitx5-wetypex-%{version}-%{release}.x86_64.rpm
+Source0:        https://github.com/panxuc/fcitx5-wetypex/releases/download/v%{version}-9/fcitx5-wetypex-%{version}-9.x86_64.rpm
 
 BuildArch:      x86_64
 BuildRequires:  cpio
@@ -70,4 +70,3 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 %files -f %{_builddir}/%{name}-filelist
-%license
