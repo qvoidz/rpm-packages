@@ -6,7 +6,6 @@ License:        GPL-3.0-or-later
 URL:            https://github.com/chen08209/FlClash
 Source0:        https://github.com/chen08209/FlClash/releases/download/v%{version}/FlClash-dev-%{version}-linux-amd64.rpm
 
-BuildArch:      x86_64
 BuildRequires:  cpio
 BuildRequires:  rpm
 
