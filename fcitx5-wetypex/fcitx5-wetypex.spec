@@ -1,3 +1,4 @@
+%global debug_package %{nil}
 Name:           fcitx5-wetypex
 Version:        3.0.1.684
 Release:        9%{?dist}
@@ -68,3 +69,7 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 %files -f %{_builddir}/%{name}-filelist
+
+%changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-9
+- Repackage upstream WeTypeX RPM for COPR
