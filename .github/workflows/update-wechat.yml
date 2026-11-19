@@ -108,7 +108,7 @@ jobs:
 
           text = re.sub(
               r"(?m)^\* .* COPR Builder <copr@example.invalid> - .*\n- Repackage the official Tencent WeChat RPM for COPR$",
-              f"* $(date -u '+%a %b %d %Y') COPR Builder <copr@example.invalid> - {version}-1\n- Update to upstream WeChat {version}",
+              f"* {datetime.now(timezone.utc).strftime('%a %b %d %Y')} COPR Builder <copr@example.invalid> - {version}-1\n- Update to upstream WeChat {version}",
               text,
               count=1,
           )
