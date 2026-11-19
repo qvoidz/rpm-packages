@@ -86,6 +86,7 @@ jobs:
           python3 - <<'PY'
           import os, re
           from pathlib import Path
+          from datetime import datetime, timezone
 
           path = Path("wechat/wechat.spec")
           text = path.read_text()
