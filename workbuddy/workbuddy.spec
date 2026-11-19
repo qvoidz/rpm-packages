@@ -1,4 +1,8 @@
 %global debug_package %{nil}
+# Repack upstream binaries byte-for-byte: disable RPM build-side processing
+# (brp-strip / brp-compress / check-rpaths), which rejects the upstream
+# binaries' "${ORIGIN}" runpaths and would modify the payload.
+%global __os_install_post %{nil}
 # Source0 is Tencent's official WorkBuddy Linux RPM, discovered through the
 # update API https://copilot.tencent.com/v2/update?platform=workbuddy-linux-x64-rpm
 # The URL embeds a build hash and changes with every release, so

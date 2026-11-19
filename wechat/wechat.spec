@@ -1,4 +1,8 @@
 %global debug_package %{nil}
+# Repack upstream binaries byte-for-byte: disable RPM build-side processing
+# (brp-strip / brp-compress / check-rpaths), which rejects the upstream
+# binaries' "${ORIGIN}" runpaths and would modify the payload.
+%global __os_install_post %{nil}
 Name:           wechat
 Version:        4.1.13.26
 Release:        2%{?dist}

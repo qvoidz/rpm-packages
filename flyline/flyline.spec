@@ -1,4 +1,7 @@
 %global debug_package %{nil}
+# Ship the prebuilt loadable unmodified: disable RPM build-side processing
+# (brp-strip etc.) which could damage the upstream artifact.
+%global __os_install_post %{nil}
 # Flyline upstream does not publish RPMs; this package wraps the official
 # prebuilt bash loadable from the GitHub release tarball
 # libflyline-v<version>-x86_64-unknown-linux-gnu.tar.gz (single file
@@ -30,7 +33,8 @@ To load it manually instead:
     enable flyline 2>/dev/null || enable -f /usr/lib64/flyline/libflyline.so flyline
 
 %prep
-%setup -q -c -T
+# -c creates the build dir; do NOT pass -T (it would skip unpacking Source0).
+%setup -q -c
 
 %build
 :
