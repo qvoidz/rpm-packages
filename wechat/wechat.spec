@@ -11,7 +11,7 @@
 # and unaffected.
 %global __provides_exclude ^.*$
 # Tencent ships these application-private libraries in the RPM payload.
-%global __requires_exclude ^(libmmcronet|libmmmojo|libowl|libroam_migration|libtxffmpeg|libvoipChannel|libvoipCodec|libvoipComm|libwxocr|libwxtrans|libxeditor_app|libxfile|libxfile_pdfium)\\.so(\\(|$)
+%global __requires_exclude ^(libmmcronet|libmmmojo|libowl|libroam_migration|libtxffmpeg|libvoipChannel|libvoipCodec|libvoipComm|libwxocr|libwxtrans|libxeditor_app|libxfile|libxfile_pdfium)\.so(\(|$)
 Name:           wechat
 Version:        4.1.13.29
 Release:        2%{?dist}
