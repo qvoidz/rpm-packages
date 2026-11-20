@@ -33,6 +33,9 @@ Packages and their upstream sources:
 - waydroid-script casualsnek/waydroid_script has no git tags: the version
                  is the default-branch commit date (YYYYMMDD) and the pinned
                  commit hash is rewritten into %global commit.
+- telegram-desktop GitHub releases of telegramdesktop/tdesktop
+                 (tag v<version>, Linux portable asset
+                 td-setup-linux-x64-<version>.tar.xz).
 
 When a newer upstream version is found, the matching spec file is rewritten
 (Version / Release / changelog) and the package names are reported through
@@ -90,6 +93,7 @@ DINGTALK_GRAY_JSON = ("https://dtapp-pub.dingtalk.com/dingtalk-desktop/"
                       "xc_dingtalk_update/linux_deb/Update/other/amd64/"
                       "linux_dingtalk_update_package_gray.json")
 NETEASE_PAGE = "https://music.163.com/download"
+TELEGRAM_REPO = "telegramdesktop/tdesktop"
 
 USER_AGENT = {"User-Agent": "qvoidz-rpm-packages-spec-bumper"}
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -686,6 +690,32 @@ def sync_netease(dry_run):
     return f"netease-cloud-music: {current} -> {version}"
 
 
+def sync_telegram(dry_run):
+    """Telegram Desktop: GitHub releases of telegramdesktop/tdesktop
+    (tag v<version>, Linux portable asset td-setup-linux-x64-<version>.tar.xz).
+    """
+    spec = read_spec("telegram-desktop")
+    current = spec_field(spec, "Version")
+    release = latest_release(TELEGRAM_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected telegram-desktop tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"telegram-desktop: up to date ({current})"
+    require_asset(release, f"td-setup-linux-x64-{version}.tar.xz")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{TELEGRAM_REPO}/releases/download/"
+                      rf"v{version}/td-setup-linux-x64-{version}.tar.xz",
+                      spec, count=1)
+        write_spec("telegram-desktop", bump_spec(
+            "telegram-desktop", spec, version, "1%{?dist}",
+            f"Update to upstream Telegram Desktop {tag}"))
+    CHANGED.append("telegram-desktop")
+    return f"telegram-desktop: {current} -> {version}"
+
+
 def selftest():
     cases = [
         ("0.9.4", "0.9.4", 0),
@@ -726,6 +756,7 @@ def main():
         sync_wps(dry_run),
         sync_dingtalk(dry_run),
         sync_netease(dry_run),
+        sync_telegram(dry_run),
     ]
     for message in messages:
         print(message)
