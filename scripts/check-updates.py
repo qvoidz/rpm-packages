@@ -24,6 +24,11 @@ Packages and their upstream sources:
                  (meeting.tencent.com/web-service/query-download-info)
                  returns version + full .deb URL. The .deb is repacked
                  into an RPM.
+- iptvnator      GitHub releases of 4gray/iptvnator (tag v<version>,
+                 asset iptvnator-<version>-linux-x86_64.rpm).
+- waydroid-script casualsnek/waydroid_script has no git tags: the version
+                 is the default-branch commit date (YYYYMMDD) and the pinned
+                 commit hash is rewritten into %global commit.
 
 When a newer upstream version is found, the matching spec file is rewritten
 (Version / Release / changelog) and the package names are reported through
@@ -65,6 +70,9 @@ WEMEET_API = ("https://meeting.tencent.com/web-service/query-download-info"
               "x86_64%22%2C%22decorators%22%3A%5B%22deb%22%5D%7D%5D"
               "&nonce=123456789abcdefg")
 WECHAT_HEADER_RANGE = "bytes=0-2097151"  # RPM lead + signature + header
+
+IPTVNATOR_REPO = "4gray/iptvnator"
+WAYDROID_REPO = "casualsnek/waydroid_script"
 
 USER_AGENT = {"User-Agent": "qvoidz-rpm-packages-spec-bumper"}
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -383,6 +391,53 @@ def sync_wemeet(dry_run):
     return f"wemeet: {current} -> {version}"
 
 
+def sync_iptvnator(dry_run):
+    """IPTVnator: GitHub releases (tag v<version>, x86_64 RPM asset)."""
+    spec = read_spec("iptvnator")
+    current = spec_field(spec, "Version")
+    release = latest_release(IPTVNATOR_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected iptvnator tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"iptvnator: up to date ({current})"
+    require_asset(release, f"iptvnator-{version}-linux-x86_64.rpm")
+    if not dry_run:
+        write_spec("iptvnator", bump_spec(
+            "iptvnator", spec, version, "1%{?dist}",
+            f"Update to upstream iptvnator {tag}"))
+    CHANGED.append("iptvnator")
+    return f"iptvnator: {current} -> {version}"
+
+
+def sync_waydroid(dry_run):
+    """waydroid_script: no tags; track the master commit.
+
+    Version = commit date (YYYYMMDD); the commit hash is pinned via
+    %global commit in the spec, rewritten on every bump.
+    """
+    spec = read_spec("waydroid-script")
+    current = spec_field(spec, "Version")
+    info = github_json(f"https://api.github.com/repos/{WAYDROID_REPO}"
+                       "/commits/HEAD")
+    sha = info["sha"]
+    date = info["commit"]["committer"]["date"]
+    version = date[:10].replace("-", "")
+    if not re.fullmatch(r"20[0-9]{6}", version):
+        raise RuntimeError(f"Unexpected waydroid_script commit date: {date}")
+    if rpm_vercmp(version, current) <= 0:
+        return f"waydroid-script: up to date ({current}, {sha[:12]})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^%global commit .*$",
+                      rf"%global commit {sha}", spec, count=1)
+        write_spec("waydroid-script", bump_spec(
+            "waydroid-script", spec, version, "1%{?dist}",
+            f"Update to waydroid_script master {sha[:12]}"))
+    CHANGED.append("waydroid-script")
+    return f"waydroid-script: {current} -> {version}"
+
+
 def selftest():
     cases = [
         ("0.9.4", "0.9.4", 0),
@@ -413,6 +468,8 @@ def main():
         sync_workbuddy(dry_run),
         sync_linuxqq(dry_run),
         sync_wemeet(dry_run),
+        sync_iptvnator(dry_run),
+        sync_waydroid(dry_run),
     ]
     for message in messages:
         print(message)
