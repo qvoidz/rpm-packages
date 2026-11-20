@@ -5,6 +5,8 @@
 # Payload bundles its own copies of libkqueue etc.; keep auto-Provides from
 # exposing them as soname provides (would shadow the real Fedora packages).
 %global __provides_exclude ^.*$
+ExclusiveArch:  x86_64
+
 Name:           fcitx5-wetypex
 Version:        3.0.1.684
 # Repack counter (.2) forces an upgrade over the -9 COPR build for the same
