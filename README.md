@@ -30,22 +30,22 @@ linuxqq 是唯一的例外：没有 Source0，载荷在安装期下载（见上�
 
 [`copr-auto-update` 工作流](.github/workflows/copr-auto-update.yml) 每日运行 `scripts/check-updates.py`：
 
-| 软件包 | 版本探测方式 |
-| --- | --- |
-| FlClash | GitHub API `releases/latest`（tag `v<版本>`） |
-| fcitx5-wetypex | GitHub API `releases/latest`（tag `v<版本>-<rel>`，两个字段同步更新） |
-| flyline | GitHub API `releases/latest`（tag `v<版本>`） |
-| 微信 | HTTP `Range` 请求只取腾讯滚动下载地址的 RPM 头部（约 2 MB），用 `rpm -qp` 嗅探版本 |
-| WorkBuddy | 腾讯更新接口（JSON：版本 + RPM 下载地址）；同样嗅探 RPM 头部做校验，改写 `Version` 和 `Source0` |
-| linuxqq | 腾讯官方桌面版下载配置（`pcConfig.json`），从文件名解析版本；只改写 `Version` 和 `%global qq_rpm_url` 两行——载荷由包的 `%post` 在用户机器上安装期下载 |
-| wemeet | 腾讯会议下载接口（`query-download-info`：版本 + .deb 地址，都会改写） |
-| iptvnator | GitHub API `releases/latest`（tag `v<版本>`） |
-| waydroid-script | 无 tag，取默认分支最新 commit：版本 = 提交日期（YYYYMMDD），commit hash 改写进 `%global commit` |
+| 软件包             | 版本探测方式                                                                                                   |
+| --------------- | -------------------------------------------------------------------------------------------------------- |
+| FlClash         | GitHub API `releases/latest`（tag `v<版本>`）                                                                |
+| fcitx5-wetypex  | GitHub API `releases/latest`（tag `v<版本>-<rel>`，两个字段同步更新）                                                 |
+| flyline         | GitHub API `releases/latest`（tag `v<版本>`）                                                                |
+| 微信              | HTTP `Range` 请求只取腾讯滚动下载地址的 RPM 头部（约 2 MB），用 `rpm -qp` 嗅探版本                                               |
+| WorkBuddy       | 腾讯更新接口（JSON：版本 + RPM 下载地址）；同样嗅探 RPM 头部做校验，改写 `Version` 和 `Source0`                                       |
+| linuxqq         | 腾讯官方桌面版下载配置（`pcConfig.json`），从文件名解析版本；只改写 `Version` 和 `%global qq_rpm_url` 两行——载荷由包的 `%post` 在用户机器上安装期下载 |
+| wemeet          | 腾讯会议下载接口（`query-download-info`：版本 + .deb 地址，都会改写）                                                        |
+| iptvnator       | GitHub API `releases/latest`（tag `v<版本>`）                                                                |
+| waydroid-script | 无 tag，取默认分支最新 commit：版本 = 提交日期（YYYYMMDD），commit hash 改写进 `%global commit`                                |
 
 发现上游新版本后，工作流会：
 
 1. 改写 spec（`Version`、`Release`、changelog），以 `github-actions[bot]` 身份提交；
-2. 只对变更的包调用 `copr-cli buildscm`，让 COPR 重建并发布；
+2. 向 COPR 的**包 webhook** 发一个 POST（永久有效，无需任何 API token），COPR 随即用刚推送的 spec 重建变更的包；
 3. 用户随后 `sudo dnf upgrade` 即可升级。
 
 仓库另有一个独立的 [GitHub Pages DNF 镜像](.github/workflows/publish-dnf-repo.yml)（`scripts/sync-dnf-repo.py`）；只用 COPR 的话可以删掉。
@@ -68,14 +68,13 @@ sudo dnf makecache
 sudo dnf install wechat workbuddy flclash fcitx5-wetypex
 ```
 
-## COPR 一次性配置
+## COPR 一次性配置（已完成）
 
 1. COPR 项目为 `qvoidz/rpm-packages`（目前只有 `fedora-45-x86_64`）。spec 里的 `ExclusiveArch: x86_64` 会让其他架构自动跳过。
-2. 在 <https://copr.fedorainfracloud.org/api/> 获取 API token。
-3. 在 GitHub 仓库添加三个 secret：`COPR_LOGIN`、`COPR_TOKEN`、`COPR_USERNAME`（都来自那个 token 页面）。
-4. 手动跑一次 `Update packages on COPR` 工作流（`workflow_dispatch`）完成首次构建，之后就全自动了。
+2. 每个包都以 SCM 源注册进 COPR 并开启了 **webhook rebuild**（改 spec 推送后自动重建）。
+3. 仓库 secret `COPR_WEBHOOK_BASE` 存了项目级 webhook 地址前缀（`https://copr.fedorainfracloud.org/webhooks/custom/<项目ID>/<uuid>`），工作流对变更的包 `POST <前缀>/<包名>/` 即可触发重建。
 
-注意：COPR 的 API token 有有效期，过期后工作流里的构建步骤会失败——重新访问上面的 token 页面生成新 token 并更新 secrets 即可。没配 secrets 时工作流仍会改写并提交 spec，只是不触发构建（日志里会有警告）。
+这套触发机制**没有有效期**：COPR 的 webhook secret 不会像 API token 那样过期，GitHub Actions 由仓库自带的 `GITHUB_TOKEN` 驱动，同样不会过期。换电脑、重装系统、长期不管，自动更新都会照常运转。
 
 ## 信任模型
 
