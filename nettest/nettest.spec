@@ -1,5 +1,5 @@
 ## Diagnostic only: probes network egress from the COPR binary build
-## chroot. Added to settle whether fetch failures in %prep are the
+## chroot. Added to settle whether fetch failures inside the prep stage are
 ## builder's firewall or the spec's fault. Removed after use.
 %global debug_package %{nil
 Name:           nettest
