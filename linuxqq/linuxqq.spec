@@ -7,25 +7,25 @@
 # Tencent's download config (cdn-go.cn/.../rainbow/pcConfig.json). Tencent's
 # CDN (qqdl.gtimg.cn) rejects datacenter IPs, and since Oct 2026 every QQNT
 # path additionally requires a real-time signature: bare links get HTTP 403
-# regardless of network or Referer (the official download page signs every
-# request first). %prep therefore swaps the bare URL for a short-lived
-# signed one via Tencent's public signing API before downloading, which
-# also works from build machines (same approach as nixpkgs' qq package).
+# regardless of network or Referer. .github/workflows/mirror.yml therefore
+# signs the URL via Tencent's public API and mirrors the payload to GitHub
+# Releases, from where this spec fetches it as a plain Source0 during the
+# SRPM build (COPR's binary chroots are fully offline; only the SRPM stage
+# has network access, and it can only do bare GETs).
 %global qq_rpm_url https://qqdl.gtimg.cn/qqfile/QQNTV2/9.9.37/release/816b3c79/QQ_3.2.35_261103_x86_64_01.rpm
-# Public, unauthenticated signing endpoint (same call as the official page):
-# body {"url":"<bare url>"} -> {"retcode":0,"data":{"url":"...?sign=...&t=..."}}
-%global qq_sign_api https://im.qq.com/http2rpc/gotrpc/noauth/trpc.qqntv2.urlsign.UrlSign/GetSign
 
 Name:           linuxqq
 Version:        3.2.35
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
 
+%global qq_mirror https://github.com/qvoidz/rpm-packages/releases/download/linuxqq-%{version}
+Source0:        %{qq_mirror}/%(basename %{qq_rpm_url})
+
 ExclusiveArch:  x86_64
 
-BuildRequires:  curl
 BuildRequires:  cpio
 BuildRequires:  coreutils
 BuildRequires:  rpm
@@ -44,56 +44,17 @@ Requires:       xdg-utils
 QQ (NTQQ) desktop client for Linux, distributed by Tencent.
 This package repackages the official upstream RPM without rebuilding
 or modifying the application binaries. The payload is fetched at BUILD
-time: Tencent's CDN refuses datacenter IPs for bare links, so the build
-first exchanges the URL for a short-lived signed one via Tencent's
-public signing API, then downloads and repacks the official RPM.
+time: Tencent's CDN requires per-request URL signing, so a GitHub
+Actions workflow mirrors the official RPM to this repository's
+Releases, and the build repacks it from Source0.
 
 %prep
-# Resolve via the chroot resolver when possible, falling back to
-# DNS-over-HTTPS over IP literals: COPR build chroots sometimes have no
-# working resolver (the systemd-resolved 127.0.0.53 stub on the builder is
-# unreachable inside the mock nspawn container, which killed build
-# 11366167 with "Could not resolve host" for every host).
-res_ip() {
-    ip=$(getent ahostsv4 "$1" 2>/dev/null | awk '{print $1; exit}')
-    if [ -z "$ip" ]; then
-        for r in "https://1.1.1.1/dns-query" "https://8.8.8.8/resolve"; do
-            ip=$(curl -fsS --max-time 15 "$r?name=$1&type=A" \
-                     -H 'accept: application/dns-json' \
-                 | tr '{,' '\n\n' | sed -n 's/.*"data":"\([0-9.]*\)".*/\1/p' \
-                 | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -1)
-            [ -n "$ip" ] && break
-        done
-    fi
-    [ -n "$ip" ] || { echo "linuxqq: cannot resolve $1" >&2; exit 1; }
-    echo "$ip"
-}
-im_ip=$(res_ip im.qq.com)
-dl_ip=$(res_ip qqdl.gtimg.cn)
-resolve_args="--resolve im.qq.com:443:$im_ip --resolve qqdl.gtimg.cn:443:$dl_ip"
-
-# Ask Tencent to sign the bare URL (falls back to it verbatim if the API
-# hiccups or a future release ships an unsigned path again).
-signed=$(curl -fsSL --retry 5 --retry-delay 3 $resolve_args \
-    -H 'Content-Type: application/json' \
-    -H 'x-oidb: {"uint32_command":"0x9b8e","uint32_service_type":1}' \
-    -H 'Origin: https://im.qq.com' \
-    -H 'Referer: https://im.qq.com' \
-    -d '{"url":"%{qq_rpm_url}"}' \
-    '%{qq_sign_api}' \
-    | sed -n 's/.*"url":"\([^"]*\)".*/\1/p' | sed 's|\\u002F|/|g; s|\\/|/|g') || signed=
-dl_url=${signed:-%{qq_rpm_url}}
-
-echo "linuxqq: downloading ..."
-curl -fsSL --retry 5 --retry-delay 3 $resolve_args -o qq.rpm "$dl_url"
-test -s qq.rpm || { echo "linuxqq: empty download" >&2; exit 1; }
-
-# Sanity check: must be the official linuxqq RPM of the expected version.
-payload=$(rpm -qp --qf '%{NAME}-%{VERSION}' qq.rpm)
+# Sanity check: the mirrored payload must be the official linuxqq RPM of
+# the expected version.
+payload=$(rpm -qp --qf '%{NAME}-%{VERSION}' '%{SOURCE0}')
 echo "linuxqq: payload RPM is $payload"
 case "$payload" in
     linuxqq-%{version}) : ;;
-    linuxqq-*) : ;;
     *) echo "linuxqq: unexpected payload '$payload'" >&2; exit 1 ;;
 esac
 
@@ -103,7 +64,7 @@ esac
 %install
 mkdir -p %{buildroot}
 cd %{buildroot}
-rpm2cpio %{_builddir}/qq.rpm | cpio -idm --quiet --no-absolute-filenames
+rpm2cpio '%{SOURCE0}' | cpio -idm --quiet --no-absolute-filenames
 # Own: every file/symlink, the private /opt payload tree, and the dirs the
 # upstream RPM itself owns (/usr/lib/.build-id/...). Other directories are
 # deliberately left unowned: rpm creates parents at install time, base
@@ -112,7 +73,7 @@ rpm2cpio %{_builddir}/qq.rpm | cpio -idm --quiet --no-absolute-filenames
 # no directory entries at all).
 { find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n'
   find %{buildroot}/opt -mindepth 1 -type d -printf '/opt/%%P\n' 2>/dev/null
-  rpm -qp --dump %{_builddir}/qq.rpm | awk '$5 ~ /^04/ {print $1}'
+  rpm -qp --dump '%{SOURCE0}' | awk '$5 ~ /^04/ {print $1}'
 } | sort -u | sed 's|.*|"&"|' > %{_builddir}/%{name}-filelist
 
 %post
@@ -128,6 +89,10 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-8
+- Fetch the payload from a GitHub Releases mirror: .github/workflows/
+  mirror.yml signs Tencent's bare URL and publishes the official RPM as
+  a release asset, so Source0 works in COPR's offline build chroots
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-7
 - Resolve build hosts via DoH fallback: COPR chroots can lack a resolver
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-6

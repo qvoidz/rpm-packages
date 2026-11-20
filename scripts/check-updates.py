@@ -347,10 +347,12 @@ def sync_linuxqq(dry_run):
     The config lists the current Linux RPM asset; the version is taken from
     the asset filename (QQ_<version>_<date>_x86_64_01.rpm). Tencent's CDN
     rejects datacenter IPs for bare links and (since Oct 2026) requires
-    per-request signing, so the spec signs the URL at build time via
-    Tencent's public GetSign API and repacks the payload. Bumping therefore
-    only rewrites Version and the %global qq_rpm_url line -- no payload is
-    ever fetched here.
+    per-request signing, so .github/workflows/mirror.yml signs and mirrors
+    the payload to GitHub Releases (running BEFORE this daily update, so
+    the asset exists before the bump triggers a COPR build) and the spec's
+    Source0 points at the mirrored asset. Bumping therefore only rewrites
+    Version and the %global qq_rpm_url line -- no payload is ever fetched
+    here.
     """
     spec = read_spec("linuxqq")
     current = spec_field(spec, "Version")
