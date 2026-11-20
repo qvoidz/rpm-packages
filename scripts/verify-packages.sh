@@ -140,7 +140,7 @@ for pkg in "${targets[@]}"; do
 
     if [[ $install_ok -eq 0 ]] && check_installed "$pkg"; then
         # dnf check detects unsatisfied dependencies and package database issues.
-        if dnf check >/tmp/rpm-verify-$pkg-deps.log 2>&1; then
+        if dnf check >"/tmp/rpm-verify-$pkg-deps.log" 2>&1; then
             inst=PASS
             echo "Install, payload assertions and dependency check: PASS"
         else
