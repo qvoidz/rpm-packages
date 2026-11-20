@@ -100,9 +100,16 @@ jobs:
           # linuxqq / netease-cloud-music are the only packages whose
           # Source0 assets come from the mirror workflow, so a broken COPR
           # build of theirs leaves users without an upgradable package.
-          # COPR build chroots occasionally break infra-wide (rpmbuild
-          # randomly missing libstdc++/libsqlite3/libz for ~hours); re-fire
-          # their webhooks whenever the latest build is not "succeeded".
+          # Builds can still fail from transient COPR infra issues or
+          # upstream payload changes; re-fire their webhooks whenever the
+          # latest build is not "succeeded". (The historical "rpmbuild
+          # randomly missing libstdc++/libsqlite3/libz" was actually
+          # self-poisoning: pre-2026-11-20 repacked RPMs exposed bundled
+          # system libs as soname Provides, so buildroot dnf resolved
+          # libz.so.1/libsqlite3.so.0 to dingtalk/wps-office instead of
+          # zlib/sqlite-libs and rpmbuild could not even start. Fixed by
+          # __provides_exclude in every repack spec + deleting the old
+          # poisoned builds.)
           for pkg in linuxqq netease-cloud-music; do
             st=$(curl -fsS \
               "https://copr.fedorainfracloud.org/api_3/build/list?ownername=qvoidz&projectname=rpm-packages&packagename=$pkg&limit=1" \
