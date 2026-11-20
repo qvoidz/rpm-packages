@@ -27,7 +27,7 @@ for spec in "${specs[@]}"; do
         continue
     fi
 
-    query=$(rpmspec -q --srpm --qf '%{NAME}|%{VERSION}|%{RELEASE}|%{ARCH}\n' "$spec" 2>&1) || {
+    query=$(rpmspec -q --qf '%{NAME}|%{VERSION}|%{RELEASE}|%{ARCH}\n' "$spec" 2>&1) || {
         echo "ERROR: RPM metadata query failed for $spec"
         printf '%s\n' "$query"
         failed=1
@@ -50,6 +50,19 @@ for spec in "${specs[@]}"; do
 
     if ! grep -q '^%files\b' "$spec"; then
         echo "ERROR: missing %files section in $spec"
+        failed=1
+    fi
+
+    if grep -qiE '^Source[0-9]*:.*\\.zip([[:space:]]|$)' "$spec" &&
+       ! grep -q 'unzip' "$spec"; then
+        echo "ERROR: ZIP source in $spec must be unpacked with unzip, not the tar-based %setup macro"
+        failed=1
+    fi
+
+    if grep -q 'rpm2cpio' "$spec" &&
+       { ! grep -q '^BuildRequires:[[:space:]]*rpm\\b' "$spec" ||
+         ! grep -q '^BuildRequires:[[:space:]]*cpio\\b' "$spec"; }; then
+        echo "ERROR: $spec uses rpm2cpio but must BuildRequire both rpm and cpio"
         failed=1
     fi
 
