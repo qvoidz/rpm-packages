@@ -103,8 +103,9 @@ COPR 通过 HTTPS 提供软件包，上游 RPM 的字节保持原样，不用项
 每次修改 SPEC 或验证脚本时，GitHub Actions 会在 Fedora 45 环境中：
 
 - 用 `rpmspec` 解析全部 SPEC，并检查 Name/Version/Release、架构声明、重复 RPM 名称和必要段落；
-- 对 shell 脚本执行语法检查和 ShellCheck；
-- 运行 `rpmlint` 并保留诊断输出（当前作为报告项，不把所有 lint warning 当作构建失败）。
+- 对自动更新脚本执行 Python 语法检查和回归自测（RPM 版本比较、宏 Release 的 changelog、Waydroid 同日提交更新）；
+- 对所有 GitHub Actions 工作流执行 YAML 语法检查；
+- 对 shell 脚本执行语法检查和 ShellCheck。
 
 也可以在 GitHub Actions 手动运行 **Test COPR package installation** 工作流。默认测试全部 19 个包，也可以在 `packages` 输入框填写空格分隔的包名。该工作流使用干净的 Fedora 45 容器，从已经发布的 COPR 仓库安装，因此验证的是当前已发布版本；分支中尚未发布的 SPEC 仍需合并并构建后才能做真实安装测试。
 
