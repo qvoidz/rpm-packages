@@ -1,5 +1,8 @@
 %global debug_package %{nil}
 %global __os_install_post %{nil}
+
+# Bundled libraries with no Fedora provider (shipped in the payload):
+%global __requires_exclude ^(liblber|libldap|libpangox)
 # DingTalk does not publish RPMs; this package repacks the official
 # x86_64 .deb. The Release directory has no version-independent URL and
 # the update JSON lags behind actual releases, so scripts/check-updates.py
@@ -8,7 +11,7 @@
 # verifies the constructed URL before rewriting Version and Source0.
 Name:           dingtalk
 Version:        8.3.1.261008001
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        DingTalk (钉钉) desktop client for Linux
 License:        LicenseRef-Alibaba-DingTalk-Software-License
 URL:            https://www.dingtalk.com/
@@ -60,5 +63,7 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated requires of bundled libs
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-1
 - Initial package: repack the official DingTalk .deb for COPR

@@ -11,7 +11,7 @@
 
 Name:           netease-cloud-music
 Version:        1.2.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        NetEase Cloud Music (网易云音乐) desktop client for Linux
 License:        LicenseRef-NetEase-CloudMusic-Software-License
 URL:            https://music.163.com/
@@ -42,7 +42,7 @@ tmpdir=$(mktemp -d /var/tmp/netease-cloud-music-XXXXXX) || exit 1
 trap 'rm -rf "$tmpdir"' EXIT
 
 echo "netease-cloud-music: downloading %{netease_deb_url} ..."
-curl -fsSL --retry 5 --retry-delay 3 -o "$tmpdir/ncm.deb" '%{netease_deb_url}' \
+curl -fsSL --retry 5 --retry-delay 3 -e 'https://music.163.com/download' -A 'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0' -o "$tmpdir/ncm.deb" '%{netease_deb_url}' \
     || { echo "netease-cloud-music: download failed; check your network and run: dnf reinstall netease-cloud-music" >&2; exit 1; }
 test -s "$tmpdir/ncm.deb" || { echo "netease-cloud-music: empty download" >&2; exit 1; }
 
@@ -91,5 +91,7 @@ fi
 %ghost /var/lib/netease-cloud-music/filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Send Referer/UA when fetching the payload: the CDN 403s bare requests
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 1.2.1-1
 - Initial package: install-time downloader for the official NetEase .deb

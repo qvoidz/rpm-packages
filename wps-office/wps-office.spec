@@ -1,5 +1,8 @@
 %global debug_package %{nil}
 %global __os_install_post %{nil}
+
+# Bundled libraries with no Fedora provider (shipped in the payload):
+%global __requires_exclude ^(libbz2\.so\.1\.0|libksailite|libmysqlclient|libpeony)
 # WPS Office publishes a version-independent rolling RPM
 # (https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/
 # wps-office.rpm, always the latest release). Source0 never changes;
@@ -7,7 +10,7 @@
 # for the upstream version and rewrites Version when it advances.
 Name:           wps-office
 Version:        12.1.2.29182.AK.preread.sw
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        WPS Office - Kingsoft office suite for Linux
 License:        LicenseRef-Kingsoft-WPS-Office-License
 URL:            https://linux.wps.cn/
@@ -63,5 +66,7 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated requires of bundled libs
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 12.1.2.29182.AK.preread.sw-1
 - Initial package: repack the official WPS Office RPM for COPR
