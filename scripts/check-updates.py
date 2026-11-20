@@ -323,10 +323,10 @@ def sync_linuxqq(dry_run):
 
     The config lists the current Linux RPM asset; the version is taken from
     the asset filename (QQ_<version>_<date>_x86_64_01.rpm). Tencent's CDN
-    rejects datacenter IPs, so the spec's Source0 is NOT the official URL but
-    a GitHub release asset of this repository (tag linuxqq-<version>),
-    published by scripts/mirror-linuxqq.py from a machine with China network
-    access. This function only bumps the spec once that release exists.
+    rejects datacenter IPs, so the spec is an installer shell package that
+    downloads the official RPM at INSTALL time on the user's machine
+    (flatpak extra-data style). Bumping therefore only rewrites Version and
+    the %global qq_rpm_url line -- no payload is ever fetched here.
     """
     spec = read_spec("linuxqq")
     current = spec_field(spec, "Version")
@@ -346,28 +346,14 @@ def sync_linuxqq(dry_run):
     if not match:
         raise RuntimeError(f"Cannot parse QQ version from URL: {official_url}")
     version = match.group(1)
-    asset_name = official_url.rsplit("/", 1)[1]
-    mirror_url = ("https://github.com/qvoidz/rpm-packages/releases/"
-                  f"download/linuxqq-{version}/{asset_name}")
     if rpm_vercmp(version, current) <= 0:
         return f"linuxqq: up to date ({current})"
-    # Only bump if the mirror release asset is actually published, otherwise
-    # the COPR build would fail on a dead Source0.
-    head = urllib.request.Request(mirror_url, method="HEAD",
-                                  headers=USER_AGENT)
-    try:
-        urllib.request.urlopen(head, timeout=60)
-    except urllib.error.HTTPError as exc:
-        if exc.code == 404:
-            return (f"linuxqq: {version} pending mirror (run "
-                    f"scripts/mirror-linuxqq.py from a China network)")
-        raise
     if not dry_run:
-        spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{mirror_url}",
-                      spec, count=1)
+        spec = re.sub(r"(?m)^%global qq_rpm_url .*$",
+                      rf"%global qq_rpm_url {official_url}", spec, count=1)
         write_spec("linuxqq", bump_spec(
             "linuxqq", spec, version, "1%{?dist}",
-            f"Update to upstream Linux QQ {version} (mirrored release)"))
+            f"Update to upstream Linux QQ {version} (install-time download)"))
     CHANGED.append("linuxqq")
     return f"linuxqq: {current} -> {version}"
 

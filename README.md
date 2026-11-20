@@ -9,7 +9,7 @@ COPR-backed Fedora packages for x86_64 that **reuse upstream RPMs as-is**: the p
 - [FlClash](https://github.com/chen08209/FlClash) — upstream Linux x86_64 RPM
 - [Fcitx5 WeTypeX](https://github.com/panxuc/fcitx5-wetypex) — upstream x86_64 RPM
 - [Flyline](https://github.com/HalFrgrd/flyline) — wraps the upstream prebuilt bash loadable from the release tarball (no upstream RPM; built by COPR)
-- [Linux QQ](https://im.qq.com/linuxqq/) — Tencent's official NTQQ RPM, mirrored into this repo's GitHub releases (`scripts/mirror-linuxqq.py`) because Tencent's CDN rejects datacenter IPs
+- [Linux QQ](https://im.qq.com/linuxqq/) — installer shell package: Tencent's CDN rejects datacenter IPs, so the payload cannot be fetched at build time. The RPM downloads the official payload **at install time on your machine** (flatpak `extra-data` style) and tracks it with a file list for clean upgrade/uninstall
 - [Tencent Meeting](https://meeting.tencent.com/) — repacks the official x86_64 .deb into an RPM (no upstream RPM; built by COPR)
 
 The WeTypeX proprietary runtime is not included in its upstream RPM. Follow the upstream setup instructions and accept its license separately.
@@ -33,7 +33,7 @@ The [`copr-auto-update` workflow](.github/workflows/copr-auto-update.yml) runs d
 | flyline | GitHub API `releases/latest` (tag `v<version>`) |
 | WeChat | HTTP `Range` request fetching only the RPM header (~2 MB) of Tencent's rolling download, version sniffed with `rpm -qp` |
 | WorkBuddy | Tencent update API (JSON: version + RPM download URL); the RPM header is sniffed as a sanity check and both `Version` and `Source0` are rewritten |
-| linuxqq | Tencent's official desktop download config (`pcConfig.json`); version parsed from the asset filename. The RPM itself is mirrored into a GitHub release of this repo by `scripts/mirror-linuxqq.py` (run it from a machine with China network access: it downloads the RPM, uploads the `linuxqq-<version>` release, bumps the spec and pushes) |
+| linuxqq | Tencent's official desktop download config (`pcConfig.json`); version parsed from the asset filename. Only `Version` and the `%global qq_rpm_url` line are rewritten — the payload itself is downloaded by the package's `%post` at install time on the user's machine |
 | wemeet | Tencent Meeting download API (`query-download-info`: version + .deb URL, both rewritten) |
 
 When an upstream version is newer than the spec, the workflow:
