@@ -15,7 +15,7 @@ command -v python3 >/dev/null || {
 # Validate the automatic version updater as well as the RPM specs. Its
 # self-tests cover RPM version ordering, macro-based changelog releases,
 # and same-day Waydroid commit bumps without making network requests.
-python3 -m py_compile scripts/check-updates.py
+python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("scripts/check-updates.py").read_text(encoding="utf-8"))'
 python3 scripts/check-updates.py --selftest
 
 mapfile -t specs < <(find . -mindepth 2 -maxdepth 2 -type f -name '*.spec' -print | sort)
