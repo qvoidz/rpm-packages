@@ -17,6 +17,8 @@
 # the real host dependencies (everything else lives inside gtk3's closure).
 %global __requires_exclude ^.*$
 
+ExclusiveArch:  x86_64
+
 Name:           FlClash
 Version:        0.9.4
 Release:        8%{?dist}
