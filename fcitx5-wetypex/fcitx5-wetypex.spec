@@ -62,6 +62,10 @@ cd %{buildroot}
 rpm2cpio %{SOURCE0} | cpio -idm --quiet --no-absolute-filenames
 find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' | sort > %{_builddir}/%{name}-filelist
 
+%check
+test -x %{buildroot}%{_bindir}/fcitx5-wetypex-setup
+find %{buildroot}%{_libdir}/fcitx5 -type f -name '*.so*' -print -quit | grep -q .
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database /usr/share/applications >/dev/null 2>&1 || :
