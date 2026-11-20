@@ -39,6 +39,40 @@ jobs:
           git commit -m "Auto-update specs: ${{ steps.bump.outputs.changed }}"
           git push
 
+      - name: Wait for the payload mirror (linuxqq / netease-cloud-music)
+        if: steps.bump.outputs.changed != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The pushed bump triggers the "Mirror upstream payloads"
+          # workflow (path filters). COPR's Source0 fetches the mirrored
+          # release asset, so the mirror MUST finish before we fire the
+          # COPR webhooks.
+          need=""
+          for pkg in ${{ steps.bump.outputs.changed }}; do
+            case " linuxqq netease-cloud-music " in
+                *" $pkg "*) need=1 ;;
+            esac
+          done
+          if [ -z "$need" ]; then
+            echo "No payload-mirrored package was bumped; nothing to wait for."
+            exit 0
+          fi
+          head=$(git rev-parse HEAD)
+          for i in $(seq 1 90); do
+            st=$(gh api "repos/${{ github.repository }}/actions/workflows/mirror.yml/runs?per_page=5" \
+              --jq '.workflow_runs[] | select(.head_sha == "'"$head"'") | .status + " " + (.conclusion // "")' \
+              | head -1)
+            echo "mirror on $head: ${st:-not started yet} ($i/90)"
+            case "$st" in
+                "completed success") echo "mirror finished"; exit 0 ;;
+                "completed failure") echo "::error::Mirror workflow failed"; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "::error::Mirror did not complete within 30 minutes"
+          exit 1
+
       - name: Trigger COPR builds via package webhooks
         if: steps.bump.outputs.changed != ''
         env:

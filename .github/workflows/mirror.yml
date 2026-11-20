@@ -35,23 +35,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve the latest upstream RPM from Tencent's config
+      - name: Resolve the payload URL from the spec
         id: resolve
         run: |
-          curl -fsSL 'https://cdn-go.cn/qq-web/im.qq.com_new/latest/rainbow/pcConfig.json' \
-            | python3 -c "
-          import json, re, sys
-          urls = re.findall(r'https://qqdl\.gtimg\.cn/[^\"\\\\]+\.rpm',
-                            json.dumps(json.load(sys.stdin)))
-          matches = [u for u in dict.fromkeys(urls)
-                     if re.search(r'QQ_[\d.]+_\d+_x86_64_\d+\.rpm$', u)]
-          assert len(matches) == 1, f'unexpected config contents: {matches}'
-          m = re.search(r'QQ_([\d.]+)_\d+_x86_64', matches[0])
-          print('bare=' + matches[0])
-          print('version=' + m.group(1))
-          print('asset=' + matches[0].rsplit('/', 1)[1])
-          " | tee /tmp/resolve.env
-          grep -E '^(bare|version|asset)=' /tmp/resolve.env >> "$GITHUB_OUTPUT"
+          # Mirror exactly what the spec needs (its %global qq_rpm_url),
+          # NOT whatever the official config currently lists: Tencent has
+          # been seen rolling a release back (3.2.35 -> 3.2.34), and the
+          # build's Source0 points at this very tag/asset name.
+          bare=$(sed -n 's/^%global qq_rpm_url //p' linuxqq/linuxqq.spec)
+          version=$(sed -n 's/^Version: *//p' linuxqq/linuxqq.spec | head -1)
+          test -n "$bare" && test -n "$version"
+          echo "bare=$bare"
+          echo "version=$version"
+          echo "asset=$(basename "$bare")"
+          {
+            echo "bare=$bare"
+            echo "version=$version"
+            echo "asset=$(basename "$bare")"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Skip if already mirrored
         id: skip
@@ -99,7 +100,7 @@ jobs:
           print(url)
           ")
           total=$(curl -fsSL -r 0-0 -o /dev/null -D - "$dl" \
-            | awk 'tolower($1) ~ /^content-range:/ {gsub("\r",""); n=split($2,a,"/"); print a[n]}')
+            | awk 'tolower($1) ~ /^content-range:/ {gsub("\r",""); n=split($NF,a,"/"); print a[n]}')
           echo "payload size: $total bytes"
           if [ -z "$total" ]; then
             # Server ignored the range request; fall back to one stream.
