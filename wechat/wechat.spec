@@ -11,8 +11,8 @@
 # and unaffected.
 %global __provides_exclude ^.*$
 Name:           wechat
-Version:        4.1.13.26
-Release:        3%{?dist}
+Version:        4.1.13.29
+Release:        1%{?dist}
 Summary:        WeChat desktop client from Tencent
 License:        LicenseRef-Tencent-Weixin-Software-and-Service-License
 URL:            https://weixin.qq.com/
@@ -57,6 +57,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-1
+- Update to upstream WeChat 4.1.13.29
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 4.1.13.26-2
