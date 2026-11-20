@@ -1,0 +1,46 @@
+name: Test COPR package installation
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "all, or a space-separated list of package names"
+        required: false
+        default: "all"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  install-test:
+    runs-on: ubuntu-latest
+    container: fedora:45
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure the public COPR repository
+        run: |
+          cat > /etc/yum.repos.d/qvoidz-rpm-packages.repo <<'EOF'
+          [qvoidz-rpm-packages]
+          name=qvoidz RPM Packages (Fedora 45)
+          baseurl=https://download.copr.fedorainfracloud.org/results/qvoidz/rpm-packages/fedora-45-x86_64/
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://download.copr.fedorainfracloud.org/results/qvoidz/rpm-packages/pubkey.gpg
+          EOF
+          dnf makecache
+
+      - name: Install, verify and safely remove selected packages
+        env:
+          PACKAGES_TO_TEST: ${{ inputs.packages }}
+        run: |
+          set -euo pipefail
+          if [ "$PACKAGES_TO_TEST" = "all" ] || [ -z "$PACKAGES_TO_TEST" ]; then
+            bash scripts/verify-packages.sh
+          else
+            read -r -a packages <<< "$PACKAGES_TO_TEST"
+            bash scripts/verify-packages.sh "${packages[@]}"
+          fi

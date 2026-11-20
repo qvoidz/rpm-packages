@@ -2,7 +2,9 @@
 %global __os_install_post %{nil}
 
 # Bundled libraries with no Fedora provider (shipped in the payload):
-%global __requires_exclude ^(liblber|libldap|libpangox)
+# These legacy/private sonames are shipped inside the upstream .deb. Keep
+# Fedora-provided host dependencies (GTK, X11, audio, etc.) auto-generated.
+%global __requires_exclude ^(liblber|libldap|libpangox|libahencrypt_sdk|libaliumidsdk|libavcodec\.so\.61|libavformat\.so\.61|libavutil\.so\.59|libcalendar_sdk|libcef|libcrypto\.so\.1\.1|libdt_resource_loader|libdtfbase|libdtnest(_module)?|libexiv2\.so\.14|libffmpeg|libgaea|libhttp_server|libicudata\.so\.63|libicui18n\.so\.63|libicuuc\.so\.63|libmeeting_sdk|libprgbase|libsession|libsodium\.so\.23|libssl\.so\.1\.1|libswresample\.so\.5|libswscale\.so\.8|libsync|libutforpc|libxcb-util\.so\.0)
 # The payload also bundles its own copies of common system libraries
 # (libm, libGLX, libstdc++, ...). rpm's automatic generator turns them
 # into soname Provides, shadowing the real Fedora providers: dnf may pull
@@ -18,7 +20,7 @@
 # verifies the constructed URL before rewriting Version and Source0.
 Name:           dingtalk
 Version:        8.3.1.261008001
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        DingTalk (钉钉) desktop client for Linux
 License:        LicenseRef-Alibaba-DingTalk-Software-License
 URL:            https://www.dingtalk.com/
@@ -70,6 +72,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-4
+- Filter exact legacy and private sonames bundled in the upstream payload
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix

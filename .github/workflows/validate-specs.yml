@@ -1,0 +1,71 @@
+name: Validate RPM specs
+
+on:
+  push:
+    branches:
+      - main
+      - "fix/**"
+    paths:
+      - "**/*.spec"
+      - "scripts/check-specs.sh"
+      - "scripts/check-requires-filters.py"
+      - "scripts/check-updates.py"
+      - "scripts/verify-packages.sh"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "**/*.spec"
+      - "scripts/check-specs.sh"
+      - "scripts/check-requires-filters.py"
+      - "scripts/check-updates.py"
+      - "scripts/verify-packages.sh"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fedora-45-specs:
+    runs-on: ubuntu-latest
+    container: fedora:45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install RPM validation tools
+        run: |
+          dnf install -y rpm-build ShellCheck python3-pyyaml
+
+      - name: Parse every spec and validate RPM metadata
+        run: bash scripts/check-specs.sh
+
+      - name: Build Zed RPM and execute its %check section
+        run: |
+          dnf install -y curl
+          topdir="$HOME/rpmbuild"
+          mkdir -p "$topdir"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+          source_url="$(rpmspec -P zed/zed.spec | awk '$1 == "Source0:" { print $2; exit }')"
+          test -n "$source_url"
+          curl --fail --location --retry 3 "$source_url" -o "$topdir/SOURCES/zed-linux-x86_64.tar.gz"
+          cp zed/zed.spec "$topdir/SPECS/zed.spec"
+          rpmbuild -bb --nodeps --define "_topdir $topdir" "$topdir/SPECS/zed.spec"
+
+      - name: Validate workflow YAML syntax
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import yaml
+
+          for path in sorted(pathlib.Path(".github/workflows").glob("*.yml")):
+              with path.open(encoding="utf-8") as stream:
+                  document = yaml.safe_load(stream)
+              if not isinstance(document, dict):
+                  raise SystemExit(f"{path}: workflow must be a YAML mapping")
+              print(f"Valid YAML: {path}")
+          PY
+
+      - name: Check shell scripts
+        run: |
+          bash -n scripts/check-specs.sh scripts/verify-packages.sh
+          shellcheck scripts/check-specs.sh scripts/verify-packages.sh

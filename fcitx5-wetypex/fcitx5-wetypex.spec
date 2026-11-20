@@ -5,11 +5,15 @@
 # Payload bundles its own copies of libkqueue etc.; keep auto-Provides from
 # exposing them as soname provides (would shadow the real Fedora packages).
 %global __provides_exclude ^.*$
+# libkqueue is bundled in the upstream RPM; it is not a Fedora runtime dependency.
+%global __requires_exclude ^libkqueue\.so\.0(\(|$)
+ExclusiveArch:  x86_64
+
 Name:           fcitx5-wetypex
 Version:        3.0.1.684
 # Repack counter (.2) forces an upgrade over the -9 COPR build for the same
 # upstream release; check-updates.py drops it on the next upstream tag bump.
-Release:        %{upstream_rel}.2%{?dist}
+Release:        %{upstream_rel}.3%{?dist}
 Summary:        WeTypeX input method adapter for Fcitx5
 License:        GPL-3.0-or-later
 URL:            https://github.com/panxuc/fcitx5-wetypex
@@ -60,6 +64,10 @@ cd %{buildroot}
 rpm2cpio %{SOURCE0} | cpio -idm --quiet --no-absolute-filenames
 find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' | sort > %{_builddir}/%{name}-filelist
 
+%check
+test -x %{buildroot}%{_bindir}/fcitx5-wetypex-setup
+find %{buildroot}%{_libdir}/fcitx5 -type f -name '*.so*' -print -quit | grep -q .
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database /usr/share/applications >/dev/null 2>&1 || :
@@ -96,6 +104,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-9.3
+- Filter the bundled libkqueue soname from automatic runtime requirements
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-9.2
 - Restore upstream %post setup instructions and cache refresh behavior
 - Filter auto-Provides so bundled libkqueue.so does not shadow the Fedora package

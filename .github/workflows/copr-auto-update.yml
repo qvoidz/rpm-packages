@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write # Required for GITHUB_TOKEN to dispatch mirror.yml.
 
 concurrency:
   group: copr-update
@@ -14,6 +15,7 @@ concurrency:
 
 jobs:
   update:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,88 +41,174 @@ jobs:
           git commit -m "Auto-update specs: ${{ steps.bump.outputs.changed }}"
           git push
 
-      - name: Wait for the payload mirror (linuxqq / netease-cloud-music)
-        if: steps.bump.outputs.changed != ''
+      - name: Ensure payload mirror assets exist
+        id: mirror
+        if: success()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          # The pushed bump triggers the "Mirror upstream payloads"
-          # workflow (path filters). COPR's Source0 fetches the mirrored
-          # release asset, so the mirror MUST finish before we fire the
-          # COPR webhooks.
-          need=""
-          for pkg in ${{ steps.bump.outputs.changed }}; do
-            case " linuxqq netease-cloud-music " in
-                *" $pkg "*) need=1 ;;
-            esac
-          done
-          if [ -z "$need" ]; then
-            echo "No payload-mirrored package was bumped; nothing to wait for."
+          set -euo pipefail
+
+          # GITHUB_TOKEN pushes do not trigger push-based workflows. Also check
+          # assets on every scheduled run: a previous CDN failure must not leave
+          # a bumped spec permanently stuck after the version detector says
+          # "up to date" on subsequent days.
+          missing=""
+          version=$(sed -n 's/^Version:[[:space:]]*//p' linuxqq/linuxqq.spec | head -1)
+          url=$(sed -n 's/^%global qq_rpm_url[[:space:]]*//p' linuxqq/linuxqq.spec)
+          tag="linuxqq-$version"
+          asset=$(basename "$url")
+          if ! gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset"; then
+            missing="$missing linuxqq"
+          fi
+
+          version=$(sed -n 's/^Version:[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec | head -1)
+          url=$(sed -n 's/^%global netease_deb_url[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec)
+          tag="netease-cloud-music-$version"
+          asset=$(basename "$url")
+          if ! gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset"; then
+            missing="$missing netease-cloud-music"
+          fi
+
+          missing=$(echo "$missing" | xargs)
+          if [ -z "$missing" ]; then
+            echo "All payload mirror assets already exist."
+            echo "mirror_ready=" >> "$GITHUB_OUTPUT"
+            echo "mirror_missing=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          echo "Missing mirror assets for:$missing"
           head=$(git rev-parse HEAD)
+
+          # workflow_dispatch is explicitly allowed to create a run when called
+          # with GITHUB_TOKEN. The push event above is not.
+          gh workflow run mirror.yml --ref main
+
+          completed=false
           for i in $(seq 1 90); do
-            st=$(gh api "repos/${{ github.repository }}/actions/workflows/mirror.yml/runs?per_page=5" \
-              --jq '.workflow_runs[] | select(.head_sha == "'"$head"'") | .status + " " + (.conclusion // "")' \
-              | head -1)
+            st=$(HEAD_SHA="$head" gh api "repos/$GH_REPO/actions/workflows/mirror.yml/runs?per_page=20" \
+              --jq '.workflow_runs[] | select(.head_sha == env.HEAD_SHA) | .status + " " + (.conclusion // "")' \
+              | head -1 || true)
             echo "mirror on $head: ${st:-not started yet} ($i/90)"
             case "$st" in
-                "completed success") echo "mirror finished"; exit 0 ;;
-                "completed failure") echo "::error::Mirror workflow failed"; exit 1 ;;
+              "completed success") completed=true; break ;;
+              "completed failure"|"completed cancelled"|"completed timed_out")
+                echo "::warning::Mirror workflow ended with: $st"
+                break
+                ;;
             esac
             sleep 20
           done
-          echo "::error::Mirror did not complete within 30 minutes"
-          exit 1
+          if [ "$completed" != true ]; then
+            echo "::warning::Mirror workflow did not complete successfully within 30 minutes; checking any assets that may still have been uploaded."
+          fi
+
+          # Mirror jobs are independent. Keep packages whose exact assets are
+          # ready moving through COPR even if the other vendor CDN is down.
+          ready=""
+          still_missing=""
+          for pkg in $missing; do
+            case "$pkg" in
+              linuxqq)
+                version=$(sed -n 's/^Version:[[:space:]]*//p' linuxqq/linuxqq.spec | head -1)
+                url=$(sed -n 's/^%global qq_rpm_url[[:space:]]*//p' linuxqq/linuxqq.spec)
+                ;;
+              netease-cloud-music)
+                version=$(sed -n 's/^Version:[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec | head -1)
+                url=$(sed -n 's/^%global netease_deb_url[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec)
+                ;;
+            esac
+            tag="$pkg-$version"
+            asset=$(basename "$url")
+            if gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset"; then
+              echo "Verified mirror asset: $tag/$asset"
+              ready="$ready $pkg"
+            else
+              echo "::warning::Required mirror asset is still missing: release=$tag asset=$asset"
+              still_missing="$still_missing $pkg"
+            fi
+          done
+
+          ready=$(echo "$ready" | xargs)
+          still_missing=$(echo "$still_missing" | xargs)
+          echo "mirror_ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "mirror_missing=$still_missing" >> "$GITHUB_OUTPUT"
 
       - name: Trigger COPR builds via package webhooks
-        if: steps.bump.outputs.changed != ''
+        if: steps.bump.outputs.changed != '' || steps.mirror.outputs.mirror_ready != ''
         env:
           COPR_WEBHOOK_BASE: ${{ secrets.COPR_WEBHOOK_BASE }}
+          MIRROR_MISSING: ${{ steps.mirror.outputs.mirror_missing }}
         run: |
-          # COPR package webhooks never expire, so no COPR API token is
-          # needed here: each SCM package in qvoidz/rpm-packages has
-          # "webhook rebuild" enabled and rebuilds its spec from the
-          # just-pushed commit when we POST to its webhook URL.
-          if [ -z "$COPR_WEBHOOK_BASE" ]; then
-            echo "::warning::COPR_WEBHOOK_BASE secret is not configured; spec bumps were pushed but no COPR build was triggered."
+          set -euo pipefail
+          packages=""
+          for pkg in ${{ steps.bump.outputs.changed }} ${{ steps.mirror.outputs.mirror_ready }}; do
+            [ -n "$pkg" ] || continue
+            case " $MIRROR_MISSING " in
+              *" $pkg "*) echo "$pkg: waiting for its missing mirror asset"; continue ;;
+            esac
+            case " $packages " in
+              *" $pkg "*) continue ;;
+            esac
+            packages="$packages $pkg"
+          done
+          packages=$(echo "$packages" | xargs)
+          if [ -z "$packages" ]; then
+            echo "No packages are ready for COPR; mirror retry will run on the next schedule."
             exit 0
           fi
-          for pkg in ${{ steps.bump.outputs.changed }}; do
+          if [ -z "$COPR_WEBHOOK_BASE" ]; then
+            echo "::error::COPR_WEBHOOK_BASE secret is not configured; specs were pushed but no COPR build was triggered."
+            exit 1
+          fi
+          base="${COPR_WEBHOOK_BASE%/}"
+          for pkg in $packages; do
             echo "Triggering COPR rebuild for $pkg ..."
-            curl -fsS -X POST "$COPR_WEBHOOK_BASE/$pkg/" \
-              || echo "::warning::COPR webhook for $pkg failed"
+            curl --retry 3 --retry-all-errors --retry-delay 5 -fsS -X POST "$base/$pkg/"
           done
 
       - name: Retry failed payload builds (COPR infra flakes)
-        if: always()
+        if: success()
         env:
           COPR_WEBHOOK_BASE: ${{ secrets.COPR_WEBHOOK_BASE }}
+          MIRROR_MISSING: ${{ steps.mirror.outputs.mirror_missing }}
         run: |
-          # linuxqq / netease-cloud-music are the only packages whose
-          # Source0 assets come from the mirror workflow, so a broken COPR
-          # build of theirs leaves users without an upgradable package.
-          # Builds can still fail from transient COPR infra issues or
-          # upstream payload changes; re-fire their webhooks whenever the
-          # latest build is not "succeeded". (The historical "rpmbuild
-          # randomly missing libstdc++/libsqlite3/libz" was actually
-          # self-poisoning: pre-2026-11-20 repacked RPMs exposed bundled
-          # system libs as soname Provides, so buildroot dnf resolved
-          # libz.so.1/libsqlite3.so.0 to dingtalk/wps-office instead of
-          # zlib/sqlite-libs and rpmbuild could not even start. Fixed by
-          # __provides_exclude in every repack spec + deleting the old
-          # poisoned builds.)
+          set -euo pipefail
+          # Do not re-trigger builds that are already queued/running. Only
+          # retry terminal failures (or a package with no build yet).
           for pkg in linuxqq netease-cloud-music; do
-            st=$(curl -fsS \
+            case " $MIRROR_MISSING " in
+              *" $pkg "*) echo "$pkg: waiting for its mirror asset"; continue ;;
+            esac
+            state=$(curl -fsS \
               "https://copr.fedorainfracloud.org/api_3/build/list?ownername=qvoidz&projectname=rpm-packages&packagename=$pkg&limit=1" \
-              | jq -r '.items[0].state')
-            if [ "$st" = "succeeded" ]; then
-              echo "$pkg: latest build succeeded, nothing to retry"
-            elif [ -z "$COPR_WEBHOOK_BASE" ]; then
-              echo "::warning::$pkg latest build is '$st' but COPR_WEBHOOK_BASE is not configured"
-            else
-              echo "$pkg: latest build is '$st', re-triggering"
-              curl -fsS -X POST "$COPR_WEBHOOK_BASE/$pkg/" \
-                || echo "::warning::$pkg retry webhook failed"
-            fi
+              | jq -r '.items[0].state // "missing"')
+            case "$state" in
+              succeeded|pending|running|starting|skipped)
+                echo "$pkg: latest build state is $state; no retry needed"
+                ;;
+              failed|canceled|cancelled|missing)
+                if [ -z "$COPR_WEBHOOK_BASE" ]; then
+                  echo "::error::$pkg latest build is '$state' but COPR_WEBHOOK_BASE is not configured"
+                  exit 1
+                fi
+                echo "$pkg: latest build state is $state; re-triggering"
+                base="${COPR_WEBHOOK_BASE%/}"
+                curl --retry 3 --retry-all-errors --retry-delay 5 -fsS -X POST "$base/$pkg/"
+                ;;
+              *)
+                echo "::error::Unknown COPR build state for $pkg: $state"
+                exit 1
+                ;;
+            esac
           done
+
+      - name: Report upstream update-check failures
+        if: steps.bump.outputs.errors != ''
+        env:
+          FAILED_PACKAGES: ${{ steps.bump.outputs.errors }}
+        run: |
+          echo "::error::Upstream version checks failed for: $FAILED_PACKAGES"
+          exit 1

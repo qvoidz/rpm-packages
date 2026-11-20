@@ -10,9 +10,11 @@
 # auto-generated provides; the package's own name provides are intrinsic
 # and unaffected.
 %global __provides_exclude ^.*$
+# Tencent ships these application-private libraries in the RPM payload.
+%global __requires_exclude ^(libmmcronet|libmmmojo|libowl|libroam_migration|libtxffmpeg|libvoipChannel|libvoipCodec|libvoipComm|libwxocr|libwxtrans|libxeditor_app|libxfile|libxfile_pdfium)\.so(\(|$)
 Name:           wechat
 Version:        4.1.13.29
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        WeChat desktop client from Tencent
 License:        LicenseRef-Tencent-Weixin-Software-and-Service-License
 URL:            https://weixin.qq.com/
@@ -57,6 +59,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-2
+- Filter application-private sonames bundled in the upstream RPM
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-1
 - Update to upstream WeChat 4.1.13.29
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix

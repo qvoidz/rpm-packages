@@ -53,12 +53,12 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 
 因此 [`mirror.yml`](.github/workflows/mirror.yml) 在 GitHub Actions runner 上：
 
-1. 从 spec 读取裸链（镜像 spec 需要的版本，不追官方配置的"当前版"——腾讯回滚过版本，配置会摆动）；
+1. 从 spec 读取裸链（镜像 spec 需要的版本，不追官方配置的“当前版”——腾讯回滚过版本，配置会摆动）；
 2. QQ：调腾讯公开签名接口 `GetSign`（nixpkgs 同方案）换临时链下载；网易云：带 Referer 直接下载；
 3. 校验后发布为 GitHub Release 资产（tag `linuxqq-<版本>` / `netease-cloud-music-<版本>`），spec 的 `Source0` 指向它，COPR 构建期正常拉取；
 4. 下载用 16 分片并行 + 断点续传（qqdl 对海外单连接限速严重，单流 45 分钟都拖不完）。
 
-`copr-auto-update` 触发 COPR 前会先等镜像 workflow 完成，消除"资产未就位构建先跑"的竞态。
+`GITHUB_TOKEN` 推送的提交不会触发其他工作流的普通 `push` 事件，因此 `copr-auto-update` 会显式 dispatch `mirror.yml`，并校验对应 Release 资产确实存在后才触发 COPR。每天也会检查已配置版本的镜像资产；如果 CDN 暂时不可用，后续定时运行会重试，不会把缺失的载荷提交给 COPR 构建。
 
 ## 自动更新
 
@@ -82,11 +82,11 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 发现新版本后，工作流自动完成：
 
 1. 改写 spec（`Version`、`Release`、changelog）并以 `github-actions[bot]` 身份提交；
-2. 等待 `mirror.yml` 就位新版本的载荷资产（仅 linuxqq / netease-cloud-music）；
+2. 对需要镜像的包显式启动 `mirror.yml`，并确认对应 Release 资产存在；
 3. 向 COPR 的包 webhook 发送 POST，COPR 用刚推送的 spec 重建变更的包；
 4. 用户侧 `sudo dnf upgrade` 即可获得更新。
 
-触发机制没有有效期：COPR 的 webhook secret 不过期，GitHub Actions 由仓库自带的 `GITHUB_TOKEN` 驱动。整个更新链路无需人工维护。
+另外，若 Linux QQ / 网易云音乐的最近一次 COPR 构建失败，工作流只会在没有正在运行的构建时重试，避免重复提交任务。
 
 ## COPR 配置说明
 
@@ -98,3 +98,24 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 COPR 通过 HTTPS 提供软件包，上游 RPM 的字节保持原样，不用项目密钥重新签名。GitHub release 资产会校验文件名与 API 提供的摘要；腾讯系包通过 HTTPS 下载并校验 RPM 元数据与 x86_64 架构；QQ/网易云的载荷由 CI 经官方渠道（签名接口 / 带 Referer 的官方 CDN）镜像到 GitHub Releases，字节不改动，构建期还校验载荷的 RPM/deb 元数据与期望版本一致。
 
 这是个人维护的非官方仓库，与上游项目无隶属关系。
+
+
+## 验证与安装测试
+
+每次修改 SPEC 或验证脚本时，GitHub Actions 会在 Fedora 45 环境中：
+
+- 用 `rpmspec` 解析全部 SPEC，并检查 Name/Version/Release、架构声明、重复 RPM 名称和必要段落；
+- 对自动更新脚本执行 Python 语法检查和回归自测（RPM 版本比较、宏 Release 的 changelog、Waydroid 同日提交更新）；
+- 对所有 GitHub Actions 工作流执行 YAML 语法检查；
+- 对 shell 脚本执行语法检查和 ShellCheck。
+
+也可以在 GitHub Actions 手动运行 **Test COPR package installation** 工作流。默认测试全部 19 个包，也可以在 `packages` 输入框填写空格分隔的包名。该工作流使用干净的 Fedora 45 容器，从已经发布的 COPR 仓库安装，因此验证的是当前已发布版本；分支中尚未发布的 SPEC 仍需合并并构建后才能做真实安装测试。
+
+在已启用本 COPR 的 Fedora 45 x86_64 测试机上，也可以逐包验证真实安装与卸载：
+
+```bash
+sudo bash scripts/verify-packages.sh
+sudo bash scripts/verify-packages.sh FlClash linuxqq
+```
+
+安装测试会检查 RPM 数据库、关键文件/启动器、桌面入口和 `dnf check` 依赖状态。测试前已经安装的软件包会保留；测试新安装的软件包时，卸载阶段不会自动清理依赖，更不会运行 `dnf autoremove`。建议在一次性 Fedora 虚拟机中执行全量测试，因为部分桌面软件包下载量较大。

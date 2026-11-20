@@ -9,7 +9,7 @@
 # ld-linux-aarch64.so.1, libc.musl-*, libc.so.7) that no Fedora package
 # provides; the helpers only ever run inside the app's own sandbox, so
 # filter those false requirements out.
-%global __requires_exclude ^(ld-linux-(aarch64|armhf|loongarch|riscv64)|libc\\.(musl|so\\.7)|libcxxrt|libc\\+\\+abi|libc\\+\\+\\.so\\.9|libm\\.so\\.(5|10\\.1)|libm\\.so\\.6\\(GLIBC_2\\.17|libpthread\\.so\\.(26\\.1|0\\(GLIBC_2\\.17\\))|libgcc_s\\.so\\.1\\(GCC_3\\.5\\)|libstdc\\+\\+\\.so\\.6\\(CXXABI_ARM|libutil\\.so\\.1\\(GLIBC_2\\.17\\))
+%global __requires_exclude ^(ld-linux-(aarch64|armhf|loongarch|riscv64)|libc\.(musl|so\.7)|libcxxrt|libc\+\+abi|libc\+\+\.so\.9|libm\.so\.(5|10\.1)|libm\.so\.6\(GLIBC_2\.17|libpthread\.so\.(26\.1|0\(GLIBC_2\.17\))|libgcc_s\.so\.1\(GCC_3\.5\)|libstdc\+\+\.so\.6\(CXXABI_ARM|libutil\.so\.1\(GLIBC_2\.17|libffmpeg\.so)
 # The payload also bundles x86-64 copies of common system libraries. rpm's
 # automatic generator turns them into soname Provides, shadowing the real
 # Fedora providers and making dnf pull this package to satisfy unrelated
@@ -23,7 +23,7 @@
 # scripts/check-updates.py rewrites both Version and Source0 automatically.
 Name:           workbuddy
 Version:        5.6.2.40046327
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        WorkBuddy AI coding assistant desktop client from Tencent
 License:        LicenseRef-Tencent-WorkBuddy-Software-License
 URL:            https://www.workbuddy.cn/
@@ -81,6 +81,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 5.6.2.40046327-3
+- Filter the bundled libffmpeg soname from automatic runtime requirements
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 5.6.2.40046327-1

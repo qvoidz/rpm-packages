@@ -9,6 +9,8 @@
 # auto-generated provides; the package's own name provides are intrinsic
 # and unaffected.
 %global __provides_exclude ^.*$
+# Tencent Meeting ships these private libraries in its .deb payload.
+%global __requires_exclude ^(libwemeet_(framework|migration|module_api|platform|qt|util)|libxcast(_codec)?|libxnn(_core|_media)?|libyuv)\.so(\(|$)
 # Tencent Meeting does not publish RPMs; this package repacks the official
 # x86_64 .deb from the official download API
 # https://meeting.tencent.com/web-service/query-download-info
@@ -16,7 +18,7 @@
 # scripts/check-updates.py rewrites both Version and Source0 automatically).
 Name:           wemeet
 Version:        3.26.10.401
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Tencent Meeting desktop client for Linux
 License:        LicenseRef-Tencent-Meeting-Software-License
 URL:            https://meeting.tencent.com/
@@ -76,6 +78,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.26.10.401-3
+- Filter application-private sonames bundled in the upstream .deb
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.26.10.401-1

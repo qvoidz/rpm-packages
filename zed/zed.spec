@@ -13,7 +13,7 @@
 # releases/latest (tag v<version>, asset zed-linux-x86_64.tar.gz).
 Name:           zed
 Version:        1.29.2
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Zed - a high-performance, multiplayer code editor
 License:        LicenseRef-Zed-License
 URL:            https://zed.dev/
@@ -46,8 +46,10 @@ mkdir -p %{buildroot}%{_bindir}
 ln -s %{_libdir}/zed.app/bin/zed %{buildroot}%{_bindir}/zed
 
 %check
-test -x %{buildroot}%{_libdir}/zed.app/bin/zed || \
-    test -x %{buildroot}%{_libdir}/zed.app/libexec/zed-editor
+# The public launcher is hard-wired to bin/zed; fail the build if upstream
+# changes the bundle layout instead of shipping a broken /usr/bin/zed.
+test -x %{buildroot}%{_libdir}/zed.app/bin/zed
+test -L %{buildroot}%{_bindir}/zed
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -64,6 +66,9 @@ fi
 %{_bindir}/zed
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.29.2-3
+- Check the /usr/bin/zed symlink itself; its absolute target is outside buildroot
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 1.29.2-1

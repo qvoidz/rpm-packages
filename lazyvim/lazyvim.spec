@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 # The starter template tracks upstream main (no tags of its own); the
 # package Version follows the LazyVim/LazyVim release tag and
-# %global starter_commit pins the LazyVim/starter archive, both rewritten
+# %%global starter_commit pins the LazyVim/starter archive, both rewritten
 # automatically by scripts/check-updates.py.
 %global starter_commit 803bc181d7c0d6d5eeba9274d9be49b287294d99
 Name:           lazyvim

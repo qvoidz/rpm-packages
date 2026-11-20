@@ -187,14 +187,33 @@ def changelog_date():
     return time.strftime("%a %b %d %Y")
 
 
-def bump_spec(pkg, text, version, release, message):
+def bump_spec(pkg, text, version, release, message, changelog_release=None):
     """Rewrite Version/Release and prepend a changelog entry."""
     text = re.sub(r"(?m)^(Version:\s*)\S+", rf"\g<1>{version}", text, count=1)
     text = re.sub(r"(?m)^(Release:\s*)\S+", rf"\g<1>{release}", text, count=1)
+    if changelog_release is None:
+        changelog_release = release.split("%", 1)[0]
+    if not changelog_release:
+        raise ValueError("A concrete changelog Release value is required")
     entry = (f"* {changelog_date()} COPR Builder <copr@example.invalid> "
-             f"- {version}-{release.split('%')[0]}\n"
+             f"- {version}-{changelog_release}\n"
              f"- {message}\n")
     return text.replace("%changelog\n", "%changelog\n" + entry, 1)
+
+
+def waydroid_release_for_update(current_version, current_commit,
+                               version, commit, current_release):
+    """Calculate a new Release when the pinned Waydroid commit changes."""
+    order = rpm_vercmp(version, current_version)
+    if order < 0 or (order == 0 and commit == current_commit):
+        return None
+    if order > 0:
+        return "1%{?dist}"
+    match = re.match(r"^(\d+)", current_release)
+    if not match:
+        raise RuntimeError(
+            f"Cannot increment Waydroid RPM Release: {current_release}")
+    return f"{int(match.group(1)) + 1}%{{?dist}}"
 
 
 def require_asset(release, name):
@@ -252,7 +271,7 @@ def sync_wetypex(dry_run):
             f"%global upstream_rel {upstream_rel}", 1)
         write_spec("fcitx5-wetypex", bump_spec(
             "fcitx5-wetypex", spec, version, "%{upstream_rel}%{?dist}",
-            f"Update to upstream {tag}"))
+            f"Update to upstream {tag}", changelog_release=upstream_rel))
     CHANGED.append("fcitx5-wetypex")
     return f"fcitx5-wetypex: {current_version}-{current_rel} -> {version}-{upstream_rel}"
 
@@ -338,10 +357,14 @@ def sync_workbuddy(dry_run):
         raise RuntimeError(f"Unexpected WorkBuddy download URL: {url}")
     if rpm_vercmp(version, current) <= 0:
         return f"workbuddy: up to date ({current})"
-    # Sanity check the payload header before bumping.
-    name, _ = rpm_header_sniff(url)
+    # Sanity check both package identity and version before bumping.
+    name, payload_version = rpm_header_sniff(url)
     if name != "workbuddy":
         raise RuntimeError(f"Unexpected WorkBuddy RPM package name: {name}")
+    if rpm_vercmp(payload_version, version) != 0:
+        raise RuntimeError(
+            f"WorkBuddy API version {version} does not match RPM payload "
+            f"version {payload_version}")
     if not dry_run:
         spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{url}", spec, count=1)
         write_spec("workbuddy", bump_spec(
@@ -440,13 +463,18 @@ def sync_iptvnator(dry_run):
 
 
 def sync_waydroid(dry_run):
-    """waydroid_script: no tags; track the master commit.
+    """waydroid_script: track the default-branch commit.
 
-    Version = commit date (YYYYMMDD); the commit hash is pinned via
-    %global commit in the spec, rewritten on every bump.
+    Version = commit date (YYYYMMDD). Multiple commits on the same date
+    increment RPM Release so later commits are not silently skipped.
     """
     spec = read_spec("waydroid-script")
     current = spec_field(spec, "Version")
+    current_commit_match = re.search(r"(?m)^%global commit\s+(\S+)", spec)
+    if not current_commit_match:
+        raise RuntimeError("%global commit not found in waydroid-script spec")
+    current_commit = current_commit_match.group(1)
+    current_release = spec_field(spec, "Release")
     info = github_json(f"https://api.github.com/repos/{WAYDROID_REPO}"
                        "/commits/HEAD")
     sha = info["sha"]
@@ -454,16 +482,18 @@ def sync_waydroid(dry_run):
     version = date[:10].replace("-", "")
     if not re.fullmatch(r"20[0-9]{6}", version):
         raise RuntimeError(f"Unexpected waydroid_script commit date: {date}")
-    if rpm_vercmp(version, current) <= 0:
+    release = waydroid_release_for_update(
+        current, current_commit, version, sha, current_release)
+    if release is None:
         return f"waydroid-script: up to date ({current}, {sha[:12]})"
     if not dry_run:
         spec = re.sub(r"(?m)^%global commit .*$",
                       rf"%global commit {sha}", spec, count=1)
         write_spec("waydroid-script", bump_spec(
-            "waydroid-script", spec, version, "1%{?dist}",
+            "waydroid-script", spec, version, release,
             f"Update to waydroid_script master {sha[:12]}"))
     CHANGED.append("waydroid-script")
-    return f"waydroid-script: {current} -> {version}"
+    return f"waydroid-script: {current} -> {version} ({sha[:12]})"
 
 
 def sync_nerdfonts(dry_run):
@@ -658,8 +688,8 @@ def sync_netease(dry_run):
     """NetEase Cloud Music: parse the official download page.
 
     The client has been frozen at 1.2.1 since 2019, so this normally
-    reports up-to-date; the payload is downloaded by the package's
-    %post at install time (CDN rejects datacenter IPs).
+    reports up-to-date; the mirror workflow fetches the official .deb
+    and publishes it as a GitHub Release asset for the COPR build.
     """
     spec = read_spec("netease-cloud-music")
     current = spec_field(spec, "Version")
@@ -730,6 +760,20 @@ def selftest():
     for a, b, expected in cases:
         result = rpm_vercmp(a, b)
         assert result == expected, f"rpm_vercmp({a}, {b}) = {result}, want {expected}"
+
+    assert waydroid_release_for_update(
+        "20261121", "a" * 40, "20261121", "a" * 40, "1%{?dist}") is None
+    assert waydroid_release_for_update(
+        "20261121", "a" * 40, "20261121", "b" * 40, "1%{?dist}") == "2%{?dist}"
+    assert waydroid_release_for_update(
+        "20261120", "a" * 40, "20261121", "b" * 40, "4%{?dist}") == "1%{?dist}"
+    assert waydroid_release_for_update(
+        "20261122", "a" * 40, "20261121", "b" * 40, "1%{?dist}") is None
+
+    changelog = bump_spec(
+        "test", "%changelog\n", "1.2.3", "%{upstream_rel}%{?dist}",
+        "test macro-based Release", changelog_release="9")
+    assert " - 1.2.3-9\n" in changelog, changelog
     print("selftest OK")
 
 
@@ -738,35 +782,49 @@ def main():
     if "--selftest" in sys.argv:
         selftest()
         return
-    messages = [
-        sync_flclash(dry_run),
-        sync_wetypex(dry_run),
-        sync_flyline(dry_run),
-        sync_wechat(dry_run),
-        sync_workbuddy(dry_run),
-        sync_linuxqq(dry_run),
-        sync_wemeet(dry_run),
-        sync_iptvnator(dry_run),
-        sync_waydroid(dry_run),
-        sync_nerdfonts(dry_run),
-        sync_lazyvim(dry_run),
-        sync_zed(dry_run),
-        sync_starship(dry_run),
-        sync_qqmusic(dry_run),
-        sync_wps(dry_run),
-        sync_dingtalk(dry_run),
-        sync_netease(dry_run),
-        sync_telegram(dry_run),
+    checks = [
+        ("FlClash", sync_flclash),
+        ("fcitx5-wetypex", sync_wetypex),
+        ("flyline", sync_flyline),
+        ("wechat", sync_wechat),
+        ("workbuddy", sync_workbuddy),
+        ("linuxqq", sync_linuxqq),
+        ("wemeet", sync_wemeet),
+        ("iptvnator", sync_iptvnator),
+        ("waydroid-script", sync_waydroid),
+        ("nerd-fonts-cascadia-code", sync_nerdfonts),
+        ("lazyvim", sync_lazyvim),
+        ("zed", sync_zed),
+        ("starship", sync_starship),
+        ("qqmusic", sync_qqmusic),
+        ("wps-office", sync_wps),
+        ("dingtalk", sync_dingtalk),
+        ("netease-cloud-music", sync_netease),
+        ("telegram-desktop", sync_telegram),
     ]
-    for message in messages:
-        print(message)
+    errors = []
+    for package, check in checks:
+        try:
+            print(check(dry_run))
+        except Exception as exc:
+            # An outage or format change at one upstream must not prevent
+            # unrelated packages from updating during this scheduled run.
+            errors.append(package)
+            print(
+                f"ERROR: {package} update check failed "
+                f"({type(exc).__name__}): {exc}",
+                file=sys.stderr)
+
     changed = sorted(set(CHANGED))
     output_file = os.environ.get("GITHUB_OUTPUT")
     if output_file:
         with open(output_file, "a", encoding="utf-8") as fd:
             fd.write("changed=" + " ".join(changed) + "\n")
+            fd.write("errors=" + " ".join(errors) + "\n")
     if changed:
         print(f"CHANGED: {' '.join(changed)}")
+    if errors:
+        print(f"UPSTREAM_CHECK_ERRORS: {' '.join(errors)}")
 
 
 if __name__ == "__main__":
