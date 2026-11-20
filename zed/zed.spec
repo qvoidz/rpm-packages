@@ -1,12 +1,19 @@
 %global debug_package %{nil}
 %global __os_install_post %{nil}
+# The zed.app payload bundles its own copies of common system libraries
+# (libstdc++, ...). rpm's automatic generator turns them into soname
+# Provides, shadowing the real Fedora providers: dnf may pull this package
+# just to satisfy e.g. libstdc++.so.6 (observed when installing
+# fcitx5-wetypex). Suppress all auto-generated provides; the package's own
+# name provides are intrinsic and unaffected.
+%global __provides_exclude ^.*$
 # Zed ships a zed.app bundle in its release tarball; this package installs
 # it under /usr/lib/zed.app unmodified and exposes /usr/bin/zed.
 # scripts/check-updates.py rewrites Version and Source0 from
 # releases/latest (tag v<version>, asset zed-linux-x86_64.tar.gz).
 Name:           zed
 Version:        1.29.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Zed - a high-performance, multiplayer code editor
 License:        LicenseRef-Zed-License
 URL:            https://zed.dev/
@@ -57,5 +64,7 @@ fi
 %{_bindir}/zed
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 1.29.2-1
 - Initial package: repack the official zed-linux-x86_64 release tarball

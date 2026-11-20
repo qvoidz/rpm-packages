@@ -2,6 +2,12 @@
 # Repack upstream binaries byte-for-byte: disable RPM build-side processing
 # (brp-strip / brp-compress / check-rpaths), which would modify the payload.
 %global __os_install_post %{nil}
+# The payload bundles its own copies of common system libraries. rpm's
+# automatic generator turns them into soname Provides, shadowing the real
+# Fedora providers and making dnf pull this package to satisfy unrelated
+# soname requires. Suppress all auto-generated provides; the package's own
+# name provides are intrinsic and unaffected.
+%global __provides_exclude ^.*$
 # Bare asset URL, rewritten automatically by scripts/check-updates.py from
 # the official download page (the upstream client has been frozen at 1.2.1
 # since 2019). NetEase's CDN (d1.music.126.net) 403s bare requests and, like
@@ -14,7 +20,7 @@
 
 Name:           netease-cloud-music
 Version:        1.2.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        NetEase Cloud Music (网易云音乐) desktop client for Linux
 License:        LicenseRef-NetEase-CloudMusic-Software-License
 URL:            https://music.163.com/
@@ -76,6 +82,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 1.2.1-3
 - Fetch the payload from a GitHub Releases mirror: the Actions runner
   can download NetEase's Referer-gated .deb, so the build repacks it

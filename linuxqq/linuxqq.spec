@@ -3,6 +3,13 @@
 # (brp-strip / brp-compress / check-rpaths), which rejects the upstream
 # binaries' "${ORIGIN}" runpaths and would modify the payload.
 %global __os_install_post %{nil}
+# The payload bundles its own copies of common system libraries. rpm's
+# automatic generator turns them into soname Provides, shadowing the real
+# Fedora providers and making dnf pull this package to satisfy unrelated
+# soname requires (observed when installing fcitx5-wetypex). Suppress all
+# auto-generated provides; the package's own name provides are intrinsic
+# and unaffected.
+%global __provides_exclude ^.*$
 # Bare asset URL, bumped automatically by scripts/check-updates.py from
 # Tencent's download config (cdn-go.cn/.../rainbow/pcConfig.json). Tencent's
 # CDN (qqdl.gtimg.cn) rejects datacenter IPs, and since Oct 2026 every QQNT
@@ -16,7 +23,7 @@
 
 Name:           linuxqq
 Version:        3.2.35
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
@@ -90,6 +97,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-8
 - Fetch the payload from a GitHub Releases mirror: .github/workflows/
   mirror.yml signs Tencent's bare URL and publishes the official RPM as

@@ -2,6 +2,13 @@
 # Ship the upstream binaries unmodified: disable RPM build-side processing
 # (brp-strip etc.) which could modify or reject the upstream payload.
 %global __os_install_post %{nil}
+# The payload bundles its own copies of common system libraries. rpm's
+# automatic generator turns them into soname Provides, shadowing the real
+# Fedora providers and making dnf pull this package to satisfy unrelated
+# soname requires (observed when installing fcitx5-wetypex). Suppress all
+# auto-generated provides; the package's own name provides are intrinsic
+# and unaffected.
+%global __provides_exclude ^.*$
 # Tencent Meeting does not publish RPMs; this package repacks the official
 # x86_64 .deb from the official download API
 # https://meeting.tencent.com/web-service/query-download-info
@@ -9,7 +16,7 @@
 # scripts/check-updates.py rewrites both Version and Source0 automatically).
 Name:           wemeet
 Version:        3.26.10.401
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Tencent Meeting desktop client for Linux
 License:        LicenseRef-Tencent-Meeting-Software-License
 URL:            https://meeting.tencent.com/
@@ -69,5 +76,7 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.26.10.401-1
 - Initial package: repack the official Tencent Meeting .deb for COPR

@@ -3,10 +3,17 @@
 # Disable RPM post-install build processing (especially brp-strip), which
 # would modify Core and make the application hang or fail at startup.
 %global __os_install_post %{nil}
+# The payload may bundle its own copies of common system libraries. rpm's
+# automatic generator turns them into soname Provides, shadowing the real
+# Fedora providers and making dnf pull this package to satisfy unrelated
+# soname requires (observed when installing fcitx5-wetypex). Suppress all
+# auto-generated provides; the package's own name provides are intrinsic
+# and unaffected.
+%global __provides_exclude ^.*$
 
 Name:           flclash
 Version:        0.9.4
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        A modern proxy client based on Clash
 License:        GPL-3.0-or-later
 URL:            https://github.com/chen08209/FlClash
@@ -44,6 +51,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 0.9.4-2
 - Preserve the upstream Core binary byte-for-byte; disable brp-strip processing
 - Match upstream libsecret dependency and package scriptlets

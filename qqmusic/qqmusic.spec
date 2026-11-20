@@ -1,5 +1,11 @@
 %global debug_package %{nil}
 %global __os_install_post %{nil}
+# The payload bundles its own copies of common system libraries. rpm's
+# automatic generator turns them into soname Provides, shadowing the real
+# Fedora providers and making dnf pull this package to satisfy unrelated
+# soname requires. Suppress all auto-generated provides; the package's own
+# name provides are intrinsic and unaffected.
+%global __provides_exclude ^.*$
 # QQ Music does not publish RPMs; this package repacks the official
 # x86_64 .deb. Tencent signs download URLs, so Source0 points at the
 # official download page's file_redirect.fcg CGI, which generates a
@@ -8,7 +14,7 @@
 # rewrites both Version and Source0 automatically.
 Name:           qqmusic
 Version:        1.1.8
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Tencent QQ Music desktop client for Linux
 License:        LicenseRef-Tencent-QQMusic-Software-License
 URL:            https://y.qq.com/
@@ -68,5 +74,7 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 1.1.8-1
 - Initial package: repack the official QQ Music .deb for COPR

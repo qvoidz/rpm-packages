@@ -3,6 +3,13 @@
 
 # Bundled libraries with no Fedora provider (shipped in the payload):
 %global __requires_exclude ^(libbz2\.so\.1\.0|libksailite|libmysqlclient|libpeony)
+# The payload also bundles its own copies of common system libraries
+# (libstdc++, libgcc_s, libc++abi, ...). rpm's automatic generator turns
+# them into soname Provides, shadowing the real Fedora providers: dnf may
+# pull this multi-GB package just to satisfy e.g. libstdc++.so.6 (observed
+# when installing fcitx5-wetypex). Suppress all auto-generated provides;
+# the package's own name provides are intrinsic and unaffected.
+%global __provides_exclude ^.*$
 # WPS Office publishes a version-independent rolling RPM
 # (https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/
 # wps-office.rpm, always the latest release). Source0 never changes;
@@ -10,7 +17,7 @@
 # for the upstream version and rewrites Version when it advances.
 Name:           wps-office
 Version:        12.1.2.29182.AK.preread.sw
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        WPS Office - Kingsoft office suite for Linux
 License:        LicenseRef-Kingsoft-WPS-Office-License
 URL:            https://linux.wps.cn/
@@ -66,6 +73,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated requires of bundled libs
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 12.1.2.29182.AK.preread.sw-1

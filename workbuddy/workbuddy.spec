@@ -10,13 +10,20 @@
 # provides; the helpers only ever run inside the app's own sandbox, so
 # filter those false requirements out.
 %global __requires_exclude ^(ld-linux-(aarch64|armhf|loongarch|riscv64)|libc\\.(musl|so\\.7)|libcxxrt|libc\\+\\+abi|libc\\+\\+\\.so\\.9|libm\\.so\\.(5|10\\.1)|libm\\.so\\.6\\(GLIBC_2\\.17|libpthread\\.so\\.(26\\.1|0\\(GLIBC_2\\.17\\))|libgcc_s\\.so\\.1\\(GCC_3\\.5\\)|libstdc\\+\\+\\.so\\.6\\(CXXABI_ARM|libutil\\.so\\.1\\(GLIBC_2\\.17\\))
+# The payload also bundles x86-64 copies of common system libraries. rpm's
+# automatic generator turns them into soname Provides, shadowing the real
+# Fedora providers and making dnf pull this package to satisfy unrelated
+# soname requires (observed when installing fcitx5-wetypex). Suppress all
+# auto-generated provides; the package's own name provides are intrinsic
+# and unaffected.
+%global __provides_exclude ^.*$
 # Source0 is Tencent's official WorkBuddy Linux RPM, discovered through the
 # update API https://copilot.tencent.com/v2/update?platform=workbuddy-linux-x64-rpm
 # The URL embeds a build hash and changes with every release, so
 # scripts/check-updates.py rewrites both Version and Source0 automatically.
 Name:           workbuddy
 Version:        5.6.2.40046327
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        WorkBuddy AI coding assistant desktop client from Tencent
 License:        LicenseRef-Tencent-WorkBuddy-Software-License
 URL:            https://www.workbuddy.cn/
@@ -74,5 +81,7 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 5.6.2.40046327-1
 - Repackage the official Tencent WorkBuddy Linux RPM (from the update API channel) for COPR

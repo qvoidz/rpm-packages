@@ -3,9 +3,16 @@
 # (brp-strip / brp-compress / check-rpaths), which rejects the upstream
 # binaries' "${ORIGIN}" runpaths and would modify the payload.
 %global __os_install_post %{nil}
+# The payload bundles its own copies of common system libraries. rpm's
+# automatic generator turns them into soname Provides, shadowing the real
+# Fedora providers and making dnf pull this package to satisfy unrelated
+# soname requires (observed when installing fcitx5-wetypex). Suppress all
+# auto-generated provides; the package's own name provides are intrinsic
+# and unaffected.
+%global __provides_exclude ^.*$
 Name:           wechat
 Version:        4.1.13.26
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        WeChat desktop client from Tencent
 License:        LicenseRef-Tencent-Weixin-Software-and-Service-License
 URL:            https://weixin.qq.com/
@@ -50,6 +57,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
+- Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 4.1.13.26-2
 - Drop the pinned SHA-256 so the rolling Tencent download can be tracked
 - Repackage the official Tencent WeChat RPM for COPR
