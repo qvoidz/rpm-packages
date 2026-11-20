@@ -39,8 +39,7 @@ check_installed() {
             [[ -x /usr/bin/FlClash ]] || rpm -ql FlClash | grep -qE '^/usr/bin/FlClash$'
             ;;
         fcitx5-wetypex)
-            command -v fcitx5-wetypex-setup >/dev/null 2>&1 ||
-                rpm -ql fcitx5-wetypex | grep -q 'fcitx5-wetypex'
+            command -v fcitx5-wetypex-setup >/dev/null 2>&1
             ;;
         flyline)
             [[ -s /usr/lib64/flyline/libflyline.so &&
@@ -65,9 +64,7 @@ check_installed() {
                -s /usr/share/lazyvim/init.lua ]]
             ;;
         zed)
-            [[ -x /usr/bin/zed ]] &&
-                { [[ -x /usr/lib64/zed.app/bin/zed ]] ||
-                  [[ -x /usr/lib64/zed.app/libexec/zed-editor ]]; }
+            [[ -x /usr/bin/zed && -x /usr/lib64/zed.app/bin/zed ]]
             ;;
         starship)
             [[ -x /usr/bin/starship ]]
