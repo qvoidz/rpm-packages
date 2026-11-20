@@ -1,10 +1,10 @@
 ## Diagnostic only: probes network egress from the COPR binary build
 ## chroot. Added to settle whether fetch failures inside the prep stage are
 ## builder's firewall or the spec's fault. Removed after use.
-%global debug_package %{nil
+%global debug_package %{nil}
 Name:           nettest
 Version:        1
-Release:        1%{?dist
+Release:        1%{?dist}
 Summary:        COPR chroot network probe (diagnostic, never install)
 License:        MIT
 ExclusiveArch:  x86_64
@@ -25,7 +25,7 @@ echo "PROBE done"
 %build
 :
 %install
-mkdir -p %{buildroot}%{_bindir
+mkdir -p %{buildroot}%{_bindir}
 printf '#!/bin/sh\ntrue\n' > %{buildroot}%{_bindir}/nettest
 chmod +x %{buildroot}%{_bindir}/nettest
 %files
