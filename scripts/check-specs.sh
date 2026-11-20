@@ -17,6 +17,7 @@ command -v python3 >/dev/null || {
 # and same-day Waydroid commit bumps without making network requests.
 python3 -c 'import ast, pathlib; ast.parse(pathlib.Path("scripts/check-updates.py").read_text(encoding="utf-8"))'
 python3 scripts/check-updates.py --selftest
+python3 scripts/check-requires-filters.py
 
 mapfile -t specs < <(find . -mindepth 2 -maxdepth 2 -type f -name '*.spec' -print | sort)
 if [[ ${#specs[@]} -eq 0 ]]; then
