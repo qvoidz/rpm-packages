@@ -46,8 +46,10 @@ mkdir -p %{buildroot}%{_bindir}
 ln -s %{_libdir}/zed.app/bin/zed %{buildroot}%{_bindir}/zed
 
 %check
-test -x %{buildroot}%{_libdir}/zed.app/bin/zed || \
-    test -x %{buildroot}%{_libdir}/zed.app/libexec/zed-editor
+# The public launcher is hard-wired to bin/zed; fail the build if upstream
+# changes the bundle layout instead of shipping a broken /usr/bin/zed.
+test -x %{buildroot}%{_libdir}/zed.app/bin/zed
+test -x %{buildroot}%{_bindir}/zed
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
