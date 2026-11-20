@@ -36,7 +36,7 @@ check_installed() {
 
     case "$pkg" in
         FlClash)
-            [[ -x /usr/bin/FlClash ]] || rpm -ql FlClash | grep -qE '^/usr/bin/FlClash$'
+            [[ -x /usr/bin/FlClash ]]
             ;;
         fcitx5-wetypex)
             command -v fcitx5-wetypex-setup >/dev/null 2>&1
