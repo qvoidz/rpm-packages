@@ -54,7 +54,8 @@ Releases, and the build repacks it from Source0.
 payload=$(rpm -qp --qf '%{NAME}-%{VERSION}' '%{SOURCE0}')
 echo "linuxqq: payload RPM is $payload"
 case "$payload" in
-    linuxqq-%{version}) : ;;
+    # upstream appends its internal build number: 3.2.35_54395
+    linuxqq-%{version}|linuxqq-%{version}_*) : ;;
     *) echo "linuxqq: unexpected payload '$payload'" >&2; exit 1 ;;
 esac
 
