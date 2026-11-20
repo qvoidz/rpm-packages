@@ -7,6 +7,16 @@ command -v rpmspec >/dev/null || {
     echo "rpmspec is required (install rpm-build)." >&2
     exit 2
 }
+command -v python3 >/dev/null || {
+    echo "python3 is required to validate the package updater." >&2
+    exit 2
+}
+
+# Validate the automatic version updater as well as the RPM specs. Its
+# self-tests cover RPM version ordering, macro-based changelog releases,
+# and same-day Waydroid commit bumps without making network requests.
+python3 -m py_compile scripts/check-updates.py
+python3 scripts/check-updates.py --selftest
 
 mapfile -t specs < <(find . -mindepth 2 -maxdepth 2 -type f -name '*.spec' -print | sort)
 if [[ ${#specs[@]} -eq 0 ]]; then
