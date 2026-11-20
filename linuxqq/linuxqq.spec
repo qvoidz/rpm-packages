@@ -1,31 +1,34 @@
 %global debug_package %{nil}
+# Repack upstream binaries byte-for-byte: disable RPM build-side processing
+# (brp-strip / brp-compress / check-rpaths), which rejects the upstream
+# binaries' "${ORIGIN}" runpaths and would modify the payload.
 %global __os_install_post %{nil}
-# Tencent's CDN (qqdl.gtimg.cn) rejects datacenter IPs, so no build machine
-# (COPR builder, GitHub runner, ...) can fetch the payload. This RPM is
-# therefore an empty shell, mirroring flatpak's "extra-data" approach: at
-# INSTALL time %post downloads the official RPM on the end user's machine
-# (which can reach the CDN), extracts the payload into the filesystem and
-# records a file list under /var/lib/linuxqq for clean upgrade/uninstall.
-# Version bumps only rewrite Version + qq_rpm_url below (done automatically
-# by scripts/check-updates.py from Tencent's download config), so the whole
-# maintenance flow stays fully automatic.
-#
-# Trade-offs vs. a regular repack:
-#   - the payload files are not owned by RPM (not in `rpm -V`, dnf history
-#     shows a tiny package); integrity relies on the TLS connection to the
-#     official Tencent CDN, same as downloading from im.qq.com manually;
-#   - installing requires network access to qqdl.gtimg.cn.
+# Bare asset URL, bumped automatically by scripts/check-updates.py from
+# Tencent's download config (cdn-go.cn/.../rainbow/pcConfig.json). Tencent's
+# CDN (qqdl.gtimg.cn) rejects datacenter IPs, and since Oct 2026 every QQNT
+# path additionally requires a real-time signature: bare links get HTTP 403
+# regardless of network or Referer (the official download page signs every
+# request first). %prep therefore swaps the bare URL for a short-lived
+# signed one via Tencent's public signing API before downloading, which
+# also works from build machines (same approach as nixpkgs' qq package).
+%global qq_rpm_url https://qqdl.gtimg.cn/qqfile/QQNTV2/9.9.37/release/816b3c79/QQ_3.2.35_261103_x86_64_01.rpm
+# Public, unauthenticated signing endpoint (same call as the official page):
+# body {"url":"<bare url>"} -> {"retcode":0,"data":{"url":"...?sign=...&t=..."}}
+%global qq_sign_api https://im.qq.com/http2rpc/gotrpc/noauth/trpc.qqntv2.urlsign.UrlSign/GetSign
 
 Name:           linuxqq
 Version:        3.2.35
-Release:        1%{?dist}
+Release:        6%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
-# Official x86_64 RPM; bumped automatically by scripts/check-updates.py.
-%global qq_rpm_url https://qqdl.gtimg.cn/qqfile/QQNTV2/9.9.37/release/816b3c79/QQ_3.2.35_261103_x86_64_01.rpm
 
 ExclusiveArch:  x86_64
+
+BuildRequires:  curl
+BuildRequires:  cpio
+BuildRequires:  coreutils
+BuildRequires:  rpm
 
 # Requires mirror the upstream RPM's dependency list (Fedora-native names).
 Requires:       at-spi2-core
@@ -36,89 +39,82 @@ Requires:       libnotify
 Requires:       libuuid
 Requires:       nss
 Requires:       xdg-utils
-# Needed by the install-time downloader scriptlet.
-Requires:       curl
-Requires:       cpio
 
 %description
 QQ (NTQQ) desktop client for Linux, distributed by Tencent.
+This package repackages the official upstream RPM without rebuilding
+or modifying the application binaries. The payload is fetched at BUILD
+time: Tencent's CDN refuses datacenter IPs for bare links, so the build
+first exchanges the URL for a short-lived signed one via Tencent's
+public signing API, then downloads and repacks the official RPM.
 
-This is an installer shell package: because Tencent's download CDN refuses
-datacenter IPs, the payload cannot be fetched at package build time. Instead,
-the official RPM is downloaded from Tencent on your machine during
-installation (like flatpak's extra-data), extracted in place, and tracked
-with a file list for clean upgrades and uninstall.
+%prep
+# Ask Tencent to sign the bare URL (falls back to it verbatim if the API
+# hiccups or a future release ships an unsigned path again).
+signed=$(curl -fsSL --retry 5 --retry-delay 3 \
+    -H 'Content-Type: application/json' \
+    -H 'x-oidb: {"uint32_command":"0x9b8e","uint32_service_type":1}' \
+    -H 'Origin: https://im.qq.com' \
+    -H 'Referer: https://im.qq.com' \
+    -d '{"url":"%{qq_rpm_url}"}' \
+    '%{qq_sign_api}' \
+    | sed -n 's/.*"url":"\([^"]*\)".*/\1/p' | sed 's|\\u002F|/|g; s|\\/|/|g') || signed=
+dl_url=${signed:-%{qq_rpm_url}}
 
-%pre
-# Nothing to clean: on upgrade %post diffs the old and new file lists and
-# removes only files dropped by the new upstream version, so a failed
-# download never destroys a working installation.
+echo "linuxqq: downloading ..."
+curl -fsSL --retry 5 --retry-delay 3 -o qq.rpm "$dl_url"
+test -s qq.rpm || { echo "linuxqq: empty download" >&2; exit 1; }
+
+# Sanity check: must be the official linuxqq RPM of the expected version.
+payload=$(rpm -qp --qf '%{NAME}-%{VERSION}' qq.rpm)
+echo "linuxqq: payload RPM is $payload"
+case "$payload" in
+    linuxqq-%{version}) : ;;
+    linuxqq-*) : ;;
+    *) echo "linuxqq: unexpected payload '$payload'" >&2; exit 1 ;;
+esac
+
+%build
+:
+
+%install
+mkdir -p %{buildroot}
+cd %{buildroot}
+rpm2cpio %{_builddir}/qq.rpm | cpio -idm --quiet --no-absolute-filenames
+# Own: every file/symlink, the private /opt payload tree, and the dirs the
+# upstream RPM itself owns (/usr/lib/.build-id/...). Other directories are
+# deliberately left unowned: rpm creates parents at install time, base
+# packages own them, and claiming one with a mismatched mode conflicts
+# (e.g. filesystem ships /usr/lib read-only 0555, upstream's cpio carries
+# no directory entries at all).
+{ find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n'
+  find %{buildroot}/opt -mindepth 1 -type d -printf '/opt/%%P\n' 2>/dev/null
+  rpm -qp --dump %{_builddir}/qq.rpm | awk '$5 ~ /^04/ {print $1}'
+} | sort -u | sed 's|.*|"&"|' > %{_builddir}/%{name}-filelist
 
 %post
-tmpdir=$(mktemp -d /var/tmp/linuxqq-XXXXXX) || exit 1
-trap 'rm -rf "$tmpdir"' EXIT
-
-echo "linuxqq: downloading %{qq_rpm_url} ..."
-curl -fsSL --retry 5 --retry-delay 3 -o "$tmpdir/qq.rpm" '%{qq_rpm_url}' \
-    || { echo "linuxqq: download failed; check your network and run: dnf reinstall linuxqq" >&2; exit 1; }
-test -s "$tmpdir/qq.rpm" || { echo "linuxqq: empty download" >&2; exit 1; }
-
-mkdir -p /var/lib/linuxqq
-
-# Payload paths relative to / (files, symlinks and directories).
-list_payload() {
-    rpm2cpio "$tmpdir/qq.rpm" | cpio -it --quiet \
-        | sed 's|^\./||' | grep -v '/$' | sort
-}
-
-# On upgrade, remove payload entries that the new upstream version no longer
-# ships (old file list minus new list), then extract over the old files.
-if [ -f /var/lib/linuxqq/filelist ]; then
-    sort /var/lib/linuxqq/filelist > "$tmpdir/old.list"
-    list_payload > "$tmpdir/new.list"
-    comm -23 "$tmpdir/old.list" "$tmpdir/new.list" > "$tmpdir/stale.list"
-    # Files/symlinks first, then empty directories deepest-first.
-    while IFS= read -r f; do
-        [ -n "$f" ] && rm -f "/$f"
-    done < "$tmpdir/stale.list"
-    while IFS= read -r f; do
-        [ -n "$f" ] && rmdir "/$f" 2>/dev/null || :
-    done < <(sort -r "$tmpdir/stale.list")
-fi
-
-(cd / && rpm2cpio "$tmpdir/qq.rpm" | cpio -idm --quiet --no-absolute-filenames)
-
-list_payload > /var/lib/linuxqq/filelist.new \
-    && mv /var/lib/linuxqq/filelist.new /var/lib/linuxqq/filelist
-
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q || :
 fi
 
 %postun
-if [ "$1" = "0" ]; then
-    if [ -f /var/lib/linuxqq/filelist ]; then
-        # Files/symlinks first, then empty directories deepest-first.
-        while IFS= read -r f; do
-            [ -n "$f" ] && rm -f "/$f"
-        done < /var/lib/linuxqq/filelist
-        while IFS= read -r f; do
-            [ -n "$f" ] && rmdir "/$f" 2>/dev/null || :
-        done < <(sort -r /var/lib/linuxqq/filelist)
-        rm -f /var/lib/linuxqq/filelist
-    fi
-    rmdir /var/lib/linuxqq 2>/dev/null || :
-    rm -rf /opt/QQ
-fi
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q || :
 fi
 
-%files
-%ghost %dir /var/lib/linuxqq
-%ghost /var/lib/linuxqq/filelist
+%files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-6
+- Own only the /opt payload tree plus upstream-owned dirs; leave /usr
+  directories unowned to avoid conflicts with the filesystem package
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-4
+- Restore upstream directory modes to avoid ownership conflicts (filesystem)
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-3
+- Own the payload directories too, so uninstall leaves no empty tree
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-2
+- Convert to a build-time repack: bare qqdl links are 403'd since Oct 2026
+  (real-time URL signing), so %prep signs via Tencent's public GetSign API
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-1
 - Installer shell package: download the official Tencent RPM at install time
   (Tencent's CDN blocks build machines), like flatpak's extra-data

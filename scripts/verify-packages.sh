@@ -8,7 +8,7 @@
 # 屏幕上会直接打印末尾若干行，方便定位原因。
 #
 # 注意：全部包的总下载量约 3 GB（wemeet/微信/WorkBuddy/WPS/钉钉的 RPM 都很大；
-# linuxqq/网易云安装时还会从腾讯/网易 CDN 额外下载官方载荷，需要国内网络）。
+# 网易云安装时还会从网易 CDN 额外下载官方载荷，需要国内网络）。
 set -u
 
 PACKAGES=(flclash fcitx5-wetypex flyline wechat workbuddy linuxqq wemeet iptvnator
@@ -23,8 +23,8 @@ check_installed() {
         flyline)         [ -f /usr/lib64/flyline/libflyline.so ] && [ -f /etc/profile.d/flyline.sh ] ;;
         wechat)          rpm -ql wechat         | grep -qE 'bin/' ;;
         workbuddy)       rpm -ql workbuddy      | grep -qE 'bin/' ;;
-        linuxqq)         # 壳包：载荷不进 RPM 数据库，看 %post 的实际产物
-                         [ -x /opt/QQ/qq ] && [ -s /var/lib/linuxqq/filelist ] \
+        linuxqq)         # 构建期重打包：载荷在 RPM 数据库里
+                         rpm -ql linuxqq | grep -q '/opt/QQ/qq' \
                          && [ -f /usr/share/applications/qq.desktop ] ;;
         wemeet)          rpm -ql wemeet         | grep -qE 'bin/' ;;
         iptvnator)       rpm -ql iptvnator      | grep -qE 'bin/' ;;
@@ -49,9 +49,8 @@ check_installed() {
 # 卸载后：检查是否清理干净
 check_removed() {
     case "$1" in
-        linuxqq) # 壳包：载荷不进 RPM 数据库，靠 %postun 按清单删除
-            [ ! -e /opt/QQ ] && [ ! -f /var/lib/linuxqq/filelist ] \
-                && ! rpm -q linuxqq >/dev/null 2>&1 ;;
+        linuxqq) # 构建期重打包：卸载后 RPM 数据库与 /opt/QQ 都应干净
+            [ ! -e /opt/QQ ] && ! rpm -q linuxqq >/dev/null 2>&1 ;;
         netease-cloud-music)
             ! rpm -q netease-cloud-music >/dev/null 2>&1 \
                 && [ ! -f /var/lib/netease-cloud-music/filelist ] ;;

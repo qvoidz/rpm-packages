@@ -19,7 +19,9 @@ Packages and their upstream sources:
 - linuxqq        Tencent's official desktop download config
                  (cdn-go.cn/.../rainbow/pcConfig.json) lists the current
                  Linux RPM URL; the version is parsed from the asset
-                 filename (QQ_<version>_<date>_x86_64_01.rpm).
+                 filename (QQ_<version>_<date>_x86_64_01.rpm). The spec
+                 signs that URL at build time via Tencent's public
+                 GetSign API and repacks the payload (bare links 403).
 - wemeet         Tencent Meeting's download API
                  (meeting.tencent.com/web-service/query-download-info)
                  returns version + full .deb URL. The .deb is repacked
@@ -344,10 +346,11 @@ def sync_linuxqq(dry_run):
 
     The config lists the current Linux RPM asset; the version is taken from
     the asset filename (QQ_<version>_<date>_x86_64_01.rpm). Tencent's CDN
-    rejects datacenter IPs, so the spec is an installer shell package that
-    downloads the official RPM at INSTALL time on the user's machine
-    (flatpak extra-data style). Bumping therefore only rewrites Version and
-    the %global qq_rpm_url line -- no payload is ever fetched here.
+    rejects datacenter IPs for bare links and (since Oct 2026) requires
+    per-request signing, so the spec signs the URL at build time via
+    Tencent's public GetSign API and repacks the payload. Bumping therefore
+    only rewrites Version and the %global qq_rpm_url line -- no payload is
+    ever fetched here.
     """
     spec = read_spec("linuxqq")
     current = spec_field(spec, "Version")
@@ -374,7 +377,7 @@ def sync_linuxqq(dry_run):
                       rf"%global qq_rpm_url {official_url}", spec, count=1)
         write_spec("linuxqq", bump_spec(
             "linuxqq", spec, version, "1%{?dist}",
-            f"Update to upstream Linux QQ {version} (install-time download)"))
+            f"Update to upstream Linux QQ {version} (build-time signed download)"))
     CHANGED.append("linuxqq")
     return f"linuxqq: {current} -> {version}"
 
