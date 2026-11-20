@@ -1,7 +1,13 @@
 # waydroid_script tracks upstream master (no git tags): Version is the
-# commit date (YYYYMMDD) and %global commit pins the exact source archive;
-# scripts/check-updates.py rewrites both automatically.
+# commit date (YYYYMMDD) and the pinned commit hash variable below is
+# rewritten automatically by scripts/check-updates.py.
+# NOTE: the comment above must not contain rpm macro syntax verbatim.
 %global commit 4a50dabd97fcb632a608b1421105258862a5b994
+
+# The bundle carries Android ARM ELF helpers under bin/ (resetprop etc.),
+# so this cannot be noarch; disable build-side binary processing so
+# brp-strip does not touch the foreign-arch ELFs.
+%global __os_install_post %{nil}
 
 # InquirerPy and pfzy are not packaged in Fedora; they are vendored from
 # pinned PyPI wheels into the package directory and put on PYTHONPATH by
@@ -16,7 +22,7 @@ Source0:        https://github.com/casualsnek/waydroid_script/archive/%{commit}/
 Source1:        https://files.pythonhosted.org/packages/ce/ff/3b59672c47c6284e8005b42e84ceba13864aa0f39f067c973d1af02f5d91/InquirerPy-0.3.4-py3-none-any.whl
 Source2:        https://files.pythonhosted.org/packages/8c/d7/8ff98376b1acc4503253b685ea09981697385ce344d4e3935c2af49e044d/pfzy-0.3.4-py3-none-any.whl
 
-BuildArch:      noarch
+ExclusiveArch:  x86_64
 BuildRequires:  python3
 Requires:       waydroid
 Requires:       python3-requests
