@@ -33,10 +33,24 @@ jobs:
 
       - name: Install RPM validation tools
         run: |
-          dnf install -y rpm-build ShellCheck
+          dnf install -y rpm-build ShellCheck python3-pyyaml
 
       - name: Parse every spec and validate RPM metadata
         run: bash scripts/check-specs.sh
+
+      - name: Validate workflow YAML syntax
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import yaml
+
+          for path in sorted(pathlib.Path(".github/workflows").glob("*.yml")):
+              with path.open(encoding="utf-8") as stream:
+                  document = yaml.safe_load(stream)
+              if not isinstance(document, dict):
+                  raise SystemExit(f"{path}: workflow must be a YAML mapping")
+              print(f"Valid YAML: {path}")
+          PY
 
       - name: Check shell scripts
         run: |
