@@ -16,6 +16,14 @@ Packages and their upstream sources:
 - workbuddy      Tencent's WorkBuddy update API returns version + full RPM
                  download URL (no GitHub releases). The RPM header is sniffed
                  the same way as WeChat as a sanity check.
+- linuxqq        Tencent's official desktop download config
+                 (cdn-go.cn/.../rainbow/pcConfig.json) lists the current
+                 Linux RPM URL; the version is parsed from the asset
+                 filename (QQ_<version>_<date>_x86_64_01.rpm).
+- wemeet         Tencent Meeting's download API
+                 (meeting.tencent.com/web-service/query-download-info)
+                 returns version + full .deb URL. The .deb is repacked
+                 into an RPM.
 
 When a newer upstream version is found, the matching spec file is rewritten
 (Version / Release / changelog) and the package names are reported through
@@ -48,6 +56,13 @@ WECHAT_URL = ("https://dldir1v6.qq.com/weixin/Universal/Linux/"
 WORKBUDDY_API = ("https://copilot.tencent.com/v2/update"
                  "?platform=workbuddy-linux-x64-rpm")
 WORKBUDDY_DOWNLOAD_HOST = "https://download.codebuddy.cn/"
+QQ_CONFIG_URL = ("https://cdn-go.cn/qq-web/im.qq.com_new/latest/"
+                 "rainbow/pcConfig.json")
+WEMEET_API = ("https://meeting.tencent.com/web-service/query-download-info"
+              "?q=%5B%7B%22package-type%22%3A%22app%22%2C%22channel%22%3A%22"
+              "0300000000%22%2C%22platform%22%3A%22linux%22%2C%22arch%22%3A%22"
+              "x86_64%22%2C%22decorators%22%3A%5B%22deb%22%5D%7D%5D"
+              "&nonce=123456789abcdefg")
 WECHAT_HEADER_RANGE = "bytes=0-2097151"  # RPM lead + signature + header
 
 USER_AGENT = {"User-Agent": "qvoidz-rpm-packages-spec-bumper"}
@@ -302,6 +317,68 @@ def sync_workbuddy(dry_run):
     return f"workbuddy: {current} -> {version}"
 
 
+def sync_linuxqq(dry_run):
+    """Linux QQ: parse the official desktop download config.
+
+    The config lists the current Linux RPM asset; the version is taken from
+    the asset filename (QQ_<version>_<date>_x86_64_01.rpm). The RPM header is
+    NOT sniffed because Tencent's CDN rejects some datacenter IPs (including
+    GitHub-hosted runners and COPR builders); the URL must only be valid.
+    """
+    spec = read_spec("linuxqq")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(QQ_CONFIG_URL, headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        config = json.load(response)
+    urls = re.findall(r"https://qqdl\.gtimg\.cn/[^\"\\]+\.rpm",
+                      json.dumps(config, ensure_ascii=False))
+    matches = [u for u in dict.fromkeys(urls)
+               if re.search(r"QQ_[\d.]+_\d+_x86_64_\d+\.rpm$", u)]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected exactly one Linux x86_64 QQ RPM in the config, "
+            f"found {matches}")
+    url = matches[0]
+    match = re.search(r"QQ_([\d.]+)_\d+_x86_64", url)
+    if not match:
+        raise RuntimeError(f"Cannot parse QQ version from URL: {url}")
+    version = match.group(1)
+    if rpm_vercmp(version, current) <= 0:
+        return f"linuxqq: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{url}", spec, count=1)
+        write_spec("linuxqq", bump_spec(
+            "linuxqq", spec, version, "1%{?dist}",
+            f"Update to upstream Linux QQ {version}"))
+    CHANGED.append("linuxqq")
+    return f"linuxqq: {current} -> {version}"
+
+
+def sync_wemeet(dry_run):
+    """Tencent Meeting: query the official download-info API for the .deb."""
+    spec = read_spec("wemeet")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(WEMEET_API, headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        info = json.load(response)["info-list"][0]
+    version, url = info["version"], info["url"]
+    if not re.fullmatch(r"[0-9][0-9.]*", version):
+        raise RuntimeError(f"Unexpected Wemeet version: {version}")
+    if (not url.startswith("https://updatecdn.meeting.qq.com/")
+            or version not in url
+            or not url.endswith(".deb")):
+        raise RuntimeError(f"Unexpected Wemeet download URL: {url}")
+    if rpm_vercmp(version, current) <= 0:
+        return f"wemeet: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{url}", spec, count=1)
+        write_spec("wemeet", bump_spec(
+            "wemeet", spec, version, "1%{?dist}",
+            f"Update to upstream Tencent Meeting {version}"))
+    CHANGED.append("wemeet")
+    return f"wemeet: {current} -> {version}"
+
+
 def selftest():
     cases = [
         ("0.9.4", "0.9.4", 0),
@@ -330,6 +407,8 @@ def main():
         sync_flyline(dry_run),
         sync_wechat(dry_run),
         sync_workbuddy(dry_run),
+        sync_linuxqq(dry_run),
+        sync_wemeet(dry_run),
     ]
     for message in messages:
         print(message)
