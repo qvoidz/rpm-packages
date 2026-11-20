@@ -38,9 +38,9 @@ check_installed() {
         qqmusic)         [ -f /usr/share/applications/qqmusic.desktop ] ;;
         wps-office)      [ -x /usr/bin/wps ] ;;
         dingtalk)        [ -f /usr/share/applications/com.alibabainc.dingtalk.desktop ] ;;
-        netease-cloud-music) # 壳包（网易 CDN 封机房，载荷安装期下载）
-                         [ -s /var/lib/netease-cloud-music/filelist ] \
-                         && [ -f /usr/share/applications/netease-cloud-music.desktop ] ;;
+        netease-cloud-music) # 构建期重打包（载荷进 RPM 数据库）
+                         [ -f /usr/share/applications/netease-cloud-music.desktop ] \
+                         && [ -x /opt/netease/netease-cloud-music/netease-cloud-music.bash ] ;;
         edge-repo)       [ -f /etc/yum.repos.d/microsoft-edge.repo ] ;;
         vscode-repo)     [ -f /etc/yum.repos.d/vscode.repo ] ;;
     esac
@@ -51,9 +51,8 @@ check_removed() {
     case "$1" in
         linuxqq) # 构建期重打包：卸载后 RPM 数据库与 /opt/QQ 都应干净
             [ ! -e /opt/QQ ] && ! rpm -q linuxqq >/dev/null 2>&1 ;;
-        netease-cloud-music)
-            ! rpm -q netease-cloud-music >/dev/null 2>&1 \
-                && [ ! -f /var/lib/netease-cloud-music/filelist ] ;;
+        netease-cloud-music) # 构建期重打包：卸载后 RPM 数据库与 /opt/netease 都应干净
+            [ ! -e /opt/netease ] && ! rpm -q netease-cloud-music >/dev/null 2>&1 ;;
         *) ! rpm -q "$1" >/dev/null 2>&1 ;;
     esac
 }
