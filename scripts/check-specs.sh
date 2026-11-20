@@ -53,15 +53,15 @@ for spec in "${specs[@]}"; do
         failed=1
     fi
 
-    if grep -qiE '^Source[0-9]*:.*\\.zip([[:space:]]|$)' "$spec" &&
+    if grep -qiE '^Source[0-9]*:.*\.zip([[:space:]]|$)' "$spec" &&
        ! grep -q 'unzip' "$spec"; then
         echo "ERROR: ZIP source in $spec must be unpacked with unzip, not the tar-based %setup macro"
         failed=1
     fi
 
     if grep -q 'rpm2cpio' "$spec" &&
-       { ! grep -q '^BuildRequires:[[:space:]]*rpm\\b' "$spec" ||
-         ! grep -q '^BuildRequires:[[:space:]]*cpio\\b' "$spec"; }; then
+       { ! grep -q '^BuildRequires:[[:space:]]*rpm\b' "$spec" ||
+         ! grep -q '^BuildRequires:[[:space:]]*cpio\b' "$spec"; }; then
         echo "ERROR: $spec uses rpm2cpio but must BuildRequire both rpm and cpio"
         failed=1
     fi
