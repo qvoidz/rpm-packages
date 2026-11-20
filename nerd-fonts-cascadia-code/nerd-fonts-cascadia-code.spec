@@ -22,7 +22,9 @@ ligatures). The TTF files are shipped unmodified from the upstream
 CascadiaCode.zip release asset.
 
 %prep
-%setup -q -c
+mkdir -p CascadiaCode
+cd CascadiaCode
+unzip -q %{SOURCE0}
 
 %build
 :
