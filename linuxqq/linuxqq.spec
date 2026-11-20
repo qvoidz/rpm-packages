@@ -3,18 +3,17 @@
 # (brp-strip / brp-compress / check-rpaths), which rejects the upstream
 # binaries' "${ORIGIN}" runpaths and would modify the payload.
 %global __os_install_post %{nil}
-# Source0 is Tencent's official Linux QQ (NTQQ) RPM. The URL (with its release
-# hash) is taken from the official download config
-# https://cdn-go.cn/qq-web/im.qq.com_new/latest/rainbow/pcConfig.json and
-# changes with every release, so scripts/check-updates.py rewrites both
-# Version and Source0 automatically.
+# Tencent's CDN (qqdl.gtimg.cn) rejects datacenter IPs, so COPR cannot fetch
+# the source directly. scripts/mirror-linuxqq.py downloads it from a machine
+# with China network access and publishes it as a GitHub release asset
+# (tag linuxqq-<version>) of this repository; Source0 points there.
 Name:           linuxqq
 Version:        3.2.35
 Release:        1%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
-Source0:        https://qqdl.gtimg.cn/qqfile/QQNTV2/9.9.37/release/816b3c79/QQ_3.2.35_261103_x86_64_01.rpm
+Source0:        https://github.com/qvoidz/rpm-packages/releases/download/linuxqq-3.2.35/QQ_3.2.35_261103_x86_64_01.rpm
 
 ExclusiveArch:  x86_64
 BuildRequires:  cpio
