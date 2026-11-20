@@ -684,8 +684,8 @@ def sync_netease(dry_run):
     """NetEase Cloud Music: parse the official download page.
 
     The client has been frozen at 1.2.1 since 2019, so this normally
-    reports up-to-date; the payload is downloaded by the package's
-    %post at install time (CDN rejects datacenter IPs).
+    reports up-to-date; the mirror workflow fetches the official .deb
+    and publishes it as a GitHub Release asset for the COPR build.
     """
     spec = read_spec("netease-cloud-music")
     current = spec_field(spec, "Version")
@@ -752,34 +752,48 @@ def main():
     if "--selftest" in sys.argv:
         selftest()
         return
-    messages = [
-        sync_flclash(dry_run),
-        sync_wetypex(dry_run),
-        sync_flyline(dry_run),
-        sync_wechat(dry_run),
-        sync_workbuddy(dry_run),
-        sync_linuxqq(dry_run),
-        sync_wemeet(dry_run),
-        sync_iptvnator(dry_run),
-        sync_waydroid(dry_run),
-        sync_nerdfonts(dry_run),
-        sync_lazyvim(dry_run),
-        sync_zed(dry_run),
-        sync_starship(dry_run),
-        sync_qqmusic(dry_run),
-        sync_wps(dry_run),
-        sync_dingtalk(dry_run),
-        sync_netease(dry_run),
+    checks = [
+        ("FlClash", sync_flclash),
+        ("fcitx5-wetypex", sync_wetypex),
+        ("flyline", sync_flyline),
+        ("wechat", sync_wechat),
+        ("workbuddy", sync_workbuddy),
+        ("linuxqq", sync_linuxqq),
+        ("wemeet", sync_wemeet),
+        ("iptvnator", sync_iptvnator),
+        ("waydroid-script", sync_waydroid),
+        ("nerd-fonts-cascadia-code", sync_nerdfonts),
+        ("lazyvim", sync_lazyvim),
+        ("zed", sync_zed),
+        ("starship", sync_starship),
+        ("qqmusic", sync_qqmusic),
+        ("wps-office", sync_wps),
+        ("dingtalk", sync_dingtalk),
+        ("netease-cloud-music", sync_netease),
     ]
-    for message in messages:
-        print(message)
+    errors = []
+    for package, check in checks:
+        try:
+            print(check(dry_run))
+        except Exception as exc:
+            # An outage or format change at one upstream must not prevent
+            # unrelated packages from updating during this scheduled run.
+            errors.append(package)
+            print(
+                f"ERROR: {package} update check failed "
+                f"({type(exc).__name__}): {exc}",
+                file=sys.stderr)
+
     changed = sorted(set(CHANGED))
     output_file = os.environ.get("GITHUB_OUTPUT")
     if output_file:
         with open(output_file, "a", encoding="utf-8") as fd:
             fd.write("changed=" + " ".join(changed) + "\n")
+            fd.write("errors=" + " ".join(errors) + "\n")
     if changed:
         print(f"CHANGED: {' '.join(changed)}")
+    if errors:
+        print(f"UPSTREAM_CHECK_ERRORS: {' '.join(errors)}")
 
 
 if __name__ == "__main__":
