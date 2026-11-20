@@ -64,6 +64,12 @@ exec /usr/bin/python3 /usr/share/waydroid-script/main.py "$@"
 LAUNCHER
 chmod 755 %{buildroot}%{_bindir}/%{name}
 
+%check
+test -x %{buildroot}%{_bindir}/%{name}
+test -s "$pkgdir/main.py"
+test -s "$pkgdir/vendor/InquirerPy/__init__.py"
+test -s "$pkgdir/vendor/pfzy/__init__.py"
+
 %files
 %{_bindir}/%{name}
 %{_datadir}/%{name}
