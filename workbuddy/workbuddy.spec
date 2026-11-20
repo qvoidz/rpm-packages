@@ -9,7 +9,7 @@
 # ld-linux-aarch64.so.1, libc.musl-*, libc.so.7) that no Fedora package
 # provides; the helpers only ever run inside the app's own sandbox, so
 # filter those false requirements out.
-%global __requires_exclude ^(ld-linux-(aarch64|armhf|loongarch|riscv64)|libc\.(musl|so\.7)|libcxxrt|libc\+\+abi|libc\+\+\.so\.9|libm\.so\.(5|10\.1)|libm\.so\.6\(GLIBC_2\.17|libpthread\.so\.(26\.1|0\(GLIBC_2\.17\))|libgcc_s\.so\.1\(GCC_3\.5\)|libstdc\+\+\.so\.6\(CXXABI_ARM|libutil\.so\.1\(GLIBC_2\.17|libffmpeg\.so)
+%global __requires_exclude ^.*$
 # The payload also bundles x86-64 copies of common system libraries. rpm's
 # automatic generator turns them into soname Provides, shadowing the real
 # Fedora providers and making dnf pull this package to satisfy unrelated
@@ -23,7 +23,7 @@
 # scripts/check-updates.py rewrites both Version and Source0 automatically.
 Name:           workbuddy
 Version:        5.6.2.40046327
-Release:        3%{?dist}
+Release:        5%{?dist}
 Summary:        WorkBuddy AI coding assistant desktop client from Tencent
 License:        LicenseRef-Tencent-WorkBuddy-Software-License
 URL:            https://www.workbuddy.cn/
@@ -47,6 +47,63 @@ Requires:       libnotify
 Requires:       mesa-libgbm
 Requires:       nss
 Requires:       xdg-utils
+
+# Explicit host dependencies (auto-generated from Fedora 45 repodata; bundled private sonames excluded)
+Requires: (libXtst or libXtst6)
+Requires: (libuuid or libuuid1)
+Requires: alsa-lib
+Requires: at-spi2-core
+Requires: gtk3
+Requires: ld-linux-x86-64.so.2()(64bit)
+Requires: ld-linux.so.2
+Requires: ld-linux.so.2(GLIBC_2.3)
+Requires: libGL.so.1()(64bit)
+Requires: libX11.so.6()(64bit)
+Requires: libXScrnSaver
+Requires: libXcomposite.so.1()(64bit)
+Requires: libXdamage.so.1()(64bit)
+Requires: libXext.so.6()(64bit)
+Requires: libXfixes.so.3()(64bit)
+Requires: libXrandr.so.2()(64bit)
+Requires: libasound.so.2()(64bit)
+Requires: libatk-1.0.so.0()(64bit)
+Requires: libatk-bridge-2.0.so.0()(64bit)
+Requires: libatspi.so.0()(64bit)
+Requires: libc++.so.1()(64bit)
+Requires: libc.so.6()(64bit)
+Requires: libcairo.so.2()(64bit)
+Requires: libcups.so.2()(64bit)
+Requires: libdbus-1.so.3()(64bit)
+Requires: libdl.so.2()(64bit)
+Requires: libexpat.so.1()(64bit)
+Requires: libgbm.so.1()(64bit)
+Requires: libgcc_s.so.1()(64bit)
+Requires: libgio-2.0.so.0()(64bit)
+Requires: libglib-2.0.so.0()(64bit)
+Requires: libgobject-2.0.so.0()(64bit)
+Requires: libgtk-3.so.0()(64bit)
+Requires: libm.so.6()(64bit)
+Requires: libnotify
+Requires: libnspr4.so()(64bit)
+Requires: libnss3.so()(64bit)
+Requires: libnssutil3.so()(64bit)
+Requires: libpango-1.0.so.0()(64bit)
+Requires: libpthread.so.0()(64bit)
+Requires: libpython3.13.so.1.0()(64bit)
+Requires: librt.so.1()(64bit)
+Requires: libsmime3.so()(64bit)
+Requires: libstdc++.so.6()(64bit)
+Requires: libtcl9.0.so()(64bit)
+Requires: libtcl9tk9.0.so()(64bit)
+Requires: libudev.so.1()(64bit)
+Requires: libutil.so.1()(64bit)
+Requires: libxcb.so.1()(64bit)
+Requires: libxkbcommon.so.0()(64bit)
+Requires: mesa-libgbm
+Requires: nss
+Requires: rtld(GNU_HASH)
+Requires: xdg-utils
+
 
 %description
 WorkBuddy AI coding assistant desktop client for Linux, distributed by
@@ -81,6 +138,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 5.6.2.40046327-4
+- Filter all bundled sonames that no Fedora package provides; keep every
+  provider-backed host dependency (regression-tested against Fedora 45 repodata)
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 5.6.2.40046327-3
 - Filter the bundled libffmpeg soname from automatic runtime requirements
 

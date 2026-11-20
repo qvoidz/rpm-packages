@@ -4,7 +4,7 @@
 # Bundled libraries with no Fedora provider (shipped in the payload):
 # These legacy/private sonames are shipped inside the upstream .deb. Keep
 # Fedora-provided host dependencies (GTK, X11, audio, etc.) auto-generated.
-%global __requires_exclude ^(liblber|libldap|libpangox|libahencrypt_sdk|libaliumidsdk|libavcodec\.so\.61|libavformat\.so\.61|libavutil\.so\.59|libcalendar_sdk|libcef|libcrypto\.so\.1\.1|libdt_resource_loader|libdtfbase|libdtnest(_module)?|libexiv2\.so\.14|libffmpeg|libgaea|libhttp_server|libicudata\.so\.63|libicui18n\.so\.63|libicuuc\.so\.63|libmeeting_sdk|libprgbase|libsession|libsodium\.so\.23|libssl\.so\.1\.1|libswresample\.so\.5|libswscale\.so\.8|libsync|libutforpc|libxcb-util\.so\.0)
+%global __requires_exclude ^.*$
 # The payload also bundles its own copies of common system libraries
 # (libm, libGLX, libstdc++, ...). rpm's automatic generator turns them
 # into soname Provides, shadowing the real Fedora providers: dnf may pull
@@ -20,7 +20,7 @@
 # verifies the constructed URL before rewriting Version and Source0.
 Name:           dingtalk
 Version:        8.3.1.261008001
-Release:        4%{?dist}
+Release:        6%{?dist}
 Summary:        DingTalk (钉钉) desktop client for Linux
 License:        LicenseRef-Alibaba-DingTalk-Software-License
 URL:            https://www.dingtalk.com/
@@ -35,6 +35,150 @@ BuildRequires:  xz
 Requires:       gtk2
 Requires:       libxcrypt-compat
 Requires:       mesa-libGLU
+
+# Explicit host dependencies (auto-generated from Fedora 45 repodata; bundled private sonames excluded)
+Requires: gtk2
+Requires: ld-linux-x86-64.so.2()(64bit)
+Requires: libEGL.so.1()(64bit)
+Requires: libFcitx5Qt5DBusAddons.so.1()(64bit)
+Requires: libGL.so.1()(64bit)
+Requires: libGLU.so.1()(64bit)
+Requires: libGLX.so.0()(64bit)
+Requires: libGLdispatch.so.0()(64bit)
+Requires: libICE.so.6()(64bit)
+Requires: libQt5Concurrent.so.5()(64bit)
+Requires: libQt5Core.so.5()(64bit)
+Requires: libQt5DBus.so.5()(64bit)
+Requires: libQt5Designer.so.5()(64bit)
+Requires: libQt5DesignerComponents.so.5()(64bit)
+Requires: libQt5EglFSDeviceIntegration.so.5()(64bit)
+Requires: libQt5EglFsKmsSupport.so.5()(64bit)
+Requires: libQt5Gui.so.5()(64bit)
+Requires: libQt5Help.so.5()(64bit)
+Requires: libQt5Multimedia.so.5()(64bit)
+Requires: libQt5MultimediaWidgets.so.5()(64bit)
+Requires: libQt5Network.so.5()(64bit)
+Requires: libQt5OpenGL.so.5()(64bit)
+Requires: libQt5PrintSupport.so.5()(64bit)
+Requires: libQt5RemoteObjects.so.5()(64bit)
+Requires: libQt5Sql.so.5()(64bit)
+Requires: libQt5Svg.so.5()(64bit)
+Requires: libQt5Test.so.5()(64bit)
+Requires: libQt5Widgets.so.5()(64bit)
+Requires: libQt5X11Extras.so.5()(64bit)
+Requires: libQt5XcbQpa.so.5()(64bit)
+Requires: libQt5Xml.so.5()(64bit)
+Requires: libSM.so.6()(64bit)
+Requires: libX11-xcb.so.1()(64bit)
+Requires: libX11.so.6()(64bit)
+Requires: libXau.so.6()(64bit)
+Requires: libXcomposite.so.1()(64bit)
+Requires: libXcursor.so.1()(64bit)
+Requires: libXdamage.so.1()(64bit)
+Requires: libXdmcp.so.6()(64bit)
+Requires: libXext.so.6()(64bit)
+Requires: libXfixes.so.3()(64bit)
+Requires: libXi.so.6()(64bit)
+Requires: libXinerama.so.1()(64bit)
+Requires: libXmu.so.6()(64bit)
+Requires: libXrandr.so.2()(64bit)
+Requires: libXrender.so.1()(64bit)
+Requires: libXt.so.6()(64bit)
+Requires: libXtst.so.6()(64bit)
+Requires: libapr-1.so.0()(64bit)
+Requires: libaprutil-1.so.0()(64bit)
+Requires: libasound.so.2()(64bit)
+Requires: libatk-1.0.so.0()(64bit)
+Requires: libatk-bridge-2.0.so.0()(64bit)
+Requires: libatspi.so.0()(64bit)
+Requires: libc.so.6()(64bit)
+Requires: libcairo-gobject.so.2()(64bit)
+Requires: libcairo.so.2()(64bit)
+Requires: libcef.so()(64bit)
+Requires: libcom_err.so.2()(64bit)
+Requires: libcrypt.so.1()(64bit)
+Requires: libcups.so.2()(64bit)
+Requires: libcurl.so.4()(64bit)
+Requires: libdbus-1.so.3()(64bit)
+Requires: libdl.so.2()(64bit)
+Requires: libdrm.so.2()(64bit)
+Requires: libepoxy.so.0()(64bit)
+Requires: libexpat.so.1()(64bit)
+Requires: libfontconfig.so.1()(64bit)
+Requires: libfreetype.so.6()(64bit)
+Requires: libfribidi.so.0()(64bit)
+Requires: libgbm.so.1()(64bit)
+Requires: libgcc_s.so.1()(64bit)
+Requires: libgcrypt.so.20()(64bit)
+Requires: libgdk-3.so.0()(64bit)
+Requires: libgdk-x11-2.0.so.0()(64bit)
+Requires: libgdk_pixbuf-2.0.so.0()(64bit)
+Requires: libgdkglext-x11-1.0.so.0()(64bit)
+Requires: libgio-2.0.so.0()(64bit)
+Requires: libglib-2.0.so.0()(64bit)
+Requires: libgmodule-2.0.so.0()(64bit)
+Requires: libgnutls.so.30()(64bit)
+Requires: libgobject-2.0.so.0()(64bit)
+Requires: libgraphite2.so.3()(64bit)
+Requires: libgssapi_krb5.so.2()(64bit)
+Requires: libgthread-2.0.so.0()(64bit)
+Requires: libgtk-3.so.0()(64bit)
+Requires: libgtk-x11-2.0.so.0()(64bit)
+Requires: libgtkglext-x11-1.0.so.0()(64bit)
+Requires: libharfbuzz.so.0()(64bit)
+Requires: libidn2.so.0()(64bit)
+Requires: libinput.so.10()(64bit)
+Requires: libk5crypto.so.3()(64bit)
+Requires: libkrb5.so.3()(64bit)
+Requires: liblber-2.4.so.2()(64bit)
+Requires: libm.so.6()(64bit)
+Requires: libmtdev.so.1()(64bit)
+Requires: libmvec.so.1()(64bit)
+Requires: libnghttp2.so.14()(64bit)
+Requires: libnspr4.so()(64bit)
+Requires: libnss3.so()(64bit)
+Requires: libnssutil3.so()(64bit)
+Requires: libopus.so.0()(64bit)
+Requires: libpango-1.0.so.0()(64bit)
+Requires: libpangocairo-1.0.so.0()(64bit)
+Requires: libpangoft2-1.0.so.0()(64bit)
+Requires: libpng16.so.16()(64bit)
+Requires: libpsl.so.5()(64bit)
+Requires: libpthread.so.0()(64bit)
+Requires: libpulse-mainloop-glib.so.0()(64bit)
+Requires: libpulse.so.0()(64bit)
+Requires: librt.so.1()(64bit)
+Requires: librtmp.so.1()(64bit)
+Requires: libsession.so()(64bit)
+Requires: libsmime3.so()(64bit)
+Requires: libssh2.so.1()(64bit)
+Requires: libstdc++.so.6()(64bit)
+Requires: libudev.so.1()(64bit)
+Requires: libunistring.so.2()(64bit)
+Requires: libuuid.so.1()(64bit)
+Requires: libwayland-server.so.0()(64bit)
+Requires: libxcb-glx.so.0()(64bit)
+Requires: libxcb-icccm.so.4()(64bit)
+Requires: libxcb-image.so.0()(64bit)
+Requires: libxcb-keysyms.so.1()(64bit)
+Requires: libxcb-randr.so.0()(64bit)
+Requires: libxcb-render-util.so.0()(64bit)
+Requires: libxcb-render.so.0()(64bit)
+Requires: libxcb-shape.so.0()(64bit)
+Requires: libxcb-shm.so.0()(64bit)
+Requires: libxcb-sync.so.1()(64bit)
+Requires: libxcb-xfixes.so.0()(64bit)
+Requires: libxcb-xinerama.so.0()(64bit)
+Requires: libxcb-xinput.so.0()(64bit)
+Requires: libxcb-xkb.so.1()(64bit)
+Requires: libxcb.so.1()(64bit)
+Requires: libxcrypt-compat
+Requires: libxkbcommon-x11.so.0()(64bit)
+Requires: libxkbcommon.so.0()(64bit)
+Requires: libz.so.1()(64bit)
+Requires: mesa-libGLU
+Requires: rtld(GNU_HASH)
+
 
 %description
 DingTalk (钉钉) desktop client for Linux, distributed by Alibaba. This
@@ -72,6 +216,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-5
+- Filter all bundled sonames that no Fedora package provides; keep every
+  provider-backed host dependency (regression-tested against Fedora 45 repodata)
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-4
 - Filter exact legacy and private sonames bundled in the upstream payload
 

@@ -11,10 +11,63 @@
 # and unaffected.
 %global __provides_exclude ^.*$
 # Tencent ships these application-private libraries in the RPM payload.
-%global __requires_exclude ^(libmmcronet|libmmmojo|libowl|libroam_migration|libtxffmpeg|libvoipChannel|libvoipCodec|libvoipComm|libwxocr|libwxtrans|libxeditor_app|libxfile|libxfile_pdfium)\.so(\(|$)
+%global __requires_exclude ^.*$
 Name:           wechat
 Version:        4.1.13.29
-Release:        2%{?dist}
+Release:        4%{?dist}
+
+# Explicit host dependencies (auto-generated from Fedora 45 repodata; bundled private sonames excluded)
+Requires: ld-linux-x86-64.so.2()(64bit)
+Requires: libEGL.so.1()(64bit)
+Requires: libGL.so.1()(64bit)
+Requires: libICE.so.6()(64bit)
+Requires: libSM.so.6()(64bit)
+Requires: libX11-xcb.so.1()(64bit)
+Requires: libX11.so.6()(64bit)
+Requires: libXcomposite.so.1()(64bit)
+Requires: libXdamage.so.1()(64bit)
+Requires: libXext.so.6()(64bit)
+Requires: libXfixes.so.3()(64bit)
+Requires: libXrandr.so.2()(64bit)
+Requires: libasound.so.2()(64bit)
+Requires: libatk-1.0.so.0()(64bit)
+Requires: libatk-bridge-2.0.so.0()(64bit)
+Requires: libatomic.so.1()(64bit)
+Requires: libatspi.so.0()(64bit)
+Requires: libc.so.6()(64bit)
+Requires: libcairo.so.2()(64bit)
+Requires: libcups.so.2()(64bit)
+Requires: libdbus-1.so.3()(64bit)
+Requires: libdl.so.2()(64bit)
+Requires: libexpat.so.1()(64bit)
+Requires: libfontconfig.so.1()(64bit)
+Requires: libgbm.so.1()(64bit)
+Requires: libgcc_s.so.1()(64bit)
+Requires: libgio-2.0.so.0()(64bit)
+Requires: libglib-2.0.so.0()(64bit)
+Requires: libgobject-2.0.so.0()(64bit)
+Requires: libjack.so.0()(64bit)
+Requires: libm.so.6()(64bit)
+Requires: libnspr4.so()(64bit)
+Requires: libnss3.so()(64bit)
+Requires: libnssutil3.so()(64bit)
+Requires: libpango-1.0.so.0()(64bit)
+Requires: libpthread.so.0()(64bit)
+Requires: libpulse.so.0()(64bit)
+Requires: librt.so.1()(64bit)
+Requires: libstdc++.so.6()(64bit)
+Requires: libudev.so.1()(64bit)
+Requires: libvlc.so.5()(64bit)
+Requires: libvlc_pulse.so.0()(64bit)
+Requires: libvlccore.so.9()(64bit)
+Requires: libxcb-keysyms.so.1()(64bit)
+Requires: libxcb-shm.so.0()(64bit)
+Requires: libxcb-xfixes.so.0()(64bit)
+Requires: libxcb.so.1()(64bit)
+Requires: libxkbcommon.so.0()(64bit)
+Requires: libz.so.1()(64bit)
+Requires: rtld(GNU_HASH)
+
 Summary:        WeChat desktop client from Tencent
 License:        LicenseRef-Tencent-Weixin-Software-and-Service-License
 URL:            https://weixin.qq.com/
@@ -59,6 +112,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-3
+- Filter all bundled sonames that no Fedora package provides; keep every
+  provider-backed host dependency (regression-tested against Fedora 45 repodata)
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-2
 - Filter application-private sonames bundled in the upstream RPM
 

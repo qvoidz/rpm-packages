@@ -10,7 +10,7 @@
 # and unaffected.
 %global __provides_exclude ^.*$
 # Tencent Meeting ships these private libraries in its .deb payload.
-%global __requires_exclude ^(libwemeet_(framework|migration|module_api|platform|qt|util)|libxcast(_codec)?|libxnn(_core|_media)?|libyuv)\.so(\(|$)
+%global __requires_exclude ^.*$
 # Tencent Meeting does not publish RPMs; this package repacks the official
 # x86_64 .deb from the official download API
 # https://meeting.tencent.com/web-service/query-download-info
@@ -18,7 +18,7 @@
 # scripts/check-updates.py rewrites both Version and Source0 automatically).
 Name:           wemeet
 Version:        3.26.10.401
-Release:        3%{?dist}
+Release:        5%{?dist}
 Summary:        Tencent Meeting desktop client for Linux
 License:        LicenseRef-Tencent-Meeting-Software-License
 URL:            https://meeting.tencent.com/
@@ -40,6 +40,135 @@ Requires:       libX11
 Requires:       nss
 Requires:       pulseaudio-libs
 Requires:       systemd-udev
+
+# Explicit host dependencies (auto-generated from Fedora 45 repodata; bundled private sonames excluded)
+Requires: dbus-libs
+Requires: desktop-file-utils
+Requires: ld-linux-x86-64.so.2()(64bit)
+Requires: libEGL.so.1()(64bit)
+Requires: libGL.so.1()(64bit)
+Requires: libICE.so.6()(64bit)
+Requires: libQt5Concurrent.so.5()(64bit)
+Requires: libQt5Core.so.5()(64bit)
+Requires: libQt5DBus.so.5()(64bit)
+Requires: libQt5Designer.so.5()(64bit)
+Requires: libQt5DesignerComponents.so.5()(64bit)
+Requires: libQt5EglFSDeviceIntegration.so.5()(64bit)
+Requires: libQt5EglFsKmsSupport.so.5()(64bit)
+Requires: libQt5Gui.so.5()(64bit)
+Requires: libQt5Help.so.5()(64bit)
+Requires: libQt5Location.so.5()(64bit)
+Requires: libQt5Network.so.5()(64bit)
+Requires: libQt5NetworkAuth.so.5()(64bit)
+Requires: libQt5OpenGL.so.5()(64bit)
+Requires: libQt5Pdf.so.5()(64bit)
+Requires: libQt5PdfWidgets.so.5()(64bit)
+Requires: libQt5Positioning.so.5()(64bit)
+Requires: libQt5PositioningQuick.so.5()(64bit)
+Requires: libQt5PrintSupport.so.5()(64bit)
+Requires: libQt5Qml.so.5()(64bit)
+Requires: libQt5QmlModels.so.5()(64bit)
+Requires: libQt5QmlWorkerScript.so.5()(64bit)
+Requires: libQt5Quick.so.5()(64bit)
+Requires: libQt5QuickControls2.so.5()(64bit)
+Requires: libQt5QuickParticles.so.5()(64bit)
+Requires: libQt5QuickShapes.so.5()(64bit)
+Requires: libQt5QuickTemplates2.so.5()(64bit)
+Requires: libQt5QuickTest.so.5()(64bit)
+Requires: libQt5QuickWidgets.so.5()(64bit)
+Requires: libQt5RemoteObjects.so.5()(64bit)
+Requires: libQt5Script.so.5()(64bit)
+Requires: libQt5ScriptTools.so.5()(64bit)
+Requires: libQt5Scxml.so.5()(64bit)
+Requires: libQt5Sql.so.5()(64bit)
+Requires: libQt5Svg.so.5()(64bit)
+Requires: libQt5Test.so.5()(64bit)
+Requires: libQt5TextToSpeech.so.5()(64bit)
+Requires: libQt5WaylandClient.so.5()(64bit)
+Requires: libQt5WaylandCompositor.so.5()(64bit)
+Requires: libQt5WebChannel.so.5()(64bit)
+Requires: libQt5WebEngine.so.5()(64bit)
+Requires: libQt5WebEngineCore.so.5()(64bit)
+Requires: libQt5WebEngineWidgets.so.5()(64bit)
+Requires: libQt5WebSockets.so.5()(64bit)
+Requires: libQt5WebView.so.5()(64bit)
+Requires: libQt5Widgets.so.5()(64bit)
+Requires: libQt5X11Extras.so.5()(64bit)
+Requires: libQt5XcbQpa.so.5()(64bit)
+Requires: libQt5Xml.so.5()(64bit)
+Requires: libQt5XmlPatterns.so.5()(64bit)
+Requires: libSM.so.6()(64bit)
+Requires: libX11
+Requires: libX11-xcb.so.1()(64bit)
+Requires: libX11.so.6()(64bit)
+Requires: libXau.so.6()(64bit)
+Requires: libXcomposite.so.1()(64bit)
+Requires: libXdamage.so.1()(64bit)
+Requires: libXdmcp.so.6()(64bit)
+Requires: libXext.so.6()(64bit)
+Requires: libXfixes.so.3()(64bit)
+Requires: libXinerama.so.1()(64bit)
+Requires: libXrandr.so.2()(64bit)
+Requires: libXrender.so.1()(64bit)
+Requires: libXtst.so.6()(64bit)
+Requires: libasound.so.2()(64bit)
+Requires: libbsd.so.0()(64bit)
+Requires: libc.so.6()(64bit)
+Requires: libdbus-1.so.3()(64bit)
+Requires: libdl.so.2()(64bit)
+Requires: libdrm.so.2()(64bit)
+Requires: libexpat.so.1()(64bit)
+Requires: libfontconfig.so.1()(64bit)
+Requires: libfreetype.so.6()(64bit)
+Requires: libgcc_s.so.1()(64bit)
+Requires: libgcrypt
+Requires: libglib-2.0.so.0()(64bit)
+Requires: libgthread-2.0.so.0()(64bit)
+Requires: libharfbuzz.so.0()(64bit)
+Requires: libm.so.6()(64bit)
+Requires: libnsl.so.1()(64bit)
+Requires: libnspr4.so()(64bit)
+Requires: libnss3.so()(64bit)
+Requires: libnssutil3.so()(64bit)
+Requires: libogg.so.0()(64bit)
+Requires: libplc4.so()(64bit)
+Requires: libplds4.so()(64bit)
+Requires: libpthread.so.0()(64bit)
+Requires: libpulse.so.0()(64bit)
+Requires: libresolv.so.2()(64bit)
+Requires: librt.so.1()(64bit)
+Requires: libsmime3.so()(64bit)
+Requires: libstdc++.so.6()(64bit)
+Requires: libudev.so.1()(64bit)
+Requires: libvorbis.so.0()(64bit)
+Requires: libvorbisenc.so.2()(64bit)
+Requires: libwayland-client.so.0()(64bit)
+Requires: libwayland-cursor.so.0()(64bit)
+Requires: libwayland-egl.so.1()(64bit)
+Requires: libwayland-server.so.0()(64bit)
+Requires: libxcb-glx.so.0()(64bit)
+Requires: libxcb-icccm.so.4()(64bit)
+Requires: libxcb-image.so.0()(64bit)
+Requires: libxcb-keysyms.so.1()(64bit)
+Requires: libxcb-randr.so.0()(64bit)
+Requires: libxcb-render-util.so.0()(64bit)
+Requires: libxcb-render.so.0()(64bit)
+Requires: libxcb-shape.so.0()(64bit)
+Requires: libxcb-shm.so.0()(64bit)
+Requires: libxcb-sync.so.1()(64bit)
+Requires: libxcb-util.so.1()(64bit)
+Requires: libxcb-xfixes.so.0()(64bit)
+Requires: libxcb-xinerama.so.0()(64bit)
+Requires: libxcb-xkb.so.1()(64bit)
+Requires: libxcb.so.1()(64bit)
+Requires: libxkbcommon-x11.so.0()(64bit)
+Requires: libxkbcommon.so.0()(64bit)
+Requires: libz.so.1()(64bit)
+Requires: nss
+Requires: pulseaudio-libs
+Requires: rtld(GNU_HASH)
+Requires: systemd-udev
+
 
 %description
 Tencent Meeting (腾讯会议) desktop client for Linux, distributed by Tencent.
@@ -78,6 +207,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.26.10.401-4
+- Filter all bundled sonames that no Fedora package provides; keep every
+  provider-backed host dependency (regression-tested against Fedora 45 repodata)
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.26.10.401-3
 - Filter application-private sonames bundled in the upstream .deb
 

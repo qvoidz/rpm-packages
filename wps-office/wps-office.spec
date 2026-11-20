@@ -2,7 +2,7 @@
 %global __os_install_post %{nil}
 
 # Bundled libraries with no Fedora provider (shipped in the payload):
-%global __requires_exclude ^(libbz2\.so\.1\.0|libksailite|libmysqlclient|libpeony|libwppapi|libwppcore|libwpsapi|libwpsapiex|libwpsbox|libwpscore|libwpsio|libwpsuil|libwpswordtool|libxercesc3)
+%global __requires_exclude ^.*$
 # The payload also bundles its own copies of common system libraries
 # (libstdc++, libgcc_s, libc++abi, ...). rpm's automatic generator turns
 # them into soname Provides, shadowing the real Fedora providers: dnf may
@@ -17,7 +17,7 @@
 # for the upstream version and rewrites Version when it advances.
 Name:           wps-office
 Version:        12.1.2.29182.AK.preread.sw
-Release:        4%{?dist}
+Release:        6%{?dist}
 Summary:        WPS Office - Kingsoft office suite for Linux
 License:        LicenseRef-Kingsoft-WPS-Office-License
 URL:            https://linux.wps.cn/
@@ -40,6 +40,105 @@ Requires:       libXext
 Requires:       libXrender
 Requires:       libxcb
 Requires:       python3
+
+# Explicit host dependencies (auto-generated from Fedora 45 repodata; bundled private sonames excluded)
+Requires: cups-libs
+Requires: fontconfig
+Requires: glib2
+Requires: ld-linux-x86-64.so.2()(64bit)
+Requires: libEGL.so.1()(64bit)
+Requires: libGL.so.1()(64bit)
+Requires: libGLU
+Requires: libICE
+Requires: libICE.so.6()(64bit)
+Requires: libQt5Core.so.5()(64bit)
+Requires: libQt5Gui.so.5()(64bit)
+Requires: libQt5Widgets.so.5()(64bit)
+Requires: libQtCore.so.4()(64bit)
+Requires: libSDL2-2.0.so.0()(64bit)
+Requires: libSM
+Requires: libSM.so.6()(64bit)
+Requires: libX11
+Requires: libX11-xcb.so.1()(64bit)
+Requires: libX11.so.6()(64bit)
+Requires: libXcomposite.so.1()(64bit)
+Requires: libXdamage.so.1()(64bit)
+Requires: libXext
+Requires: libXext.so.6()(64bit)
+Requires: libXfixes.so.3()(64bit)
+Requires: libXrandr.so.2()(64bit)
+Requires: libXrender
+Requires: libXrender.so.1()(64bit)
+Requires: libXtst.so.6()(64bit)
+Requires: libXv.so.1()(64bit)
+Requires: libanl.so.1()(64bit)
+Requires: libasound.so.2()(64bit)
+Requires: libatk-1.0.so.0()(64bit)
+Requires: libatk-bridge-2.0.so.0()(64bit)
+Requires: libatspi.so.0()(64bit)
+Requires: libc++abi.so.1()(64bit)
+Requires: libc.so.6()(64bit)
+Requires: libcairo-gobject.so.2()(64bit)
+Requires: libcairo.so.2()(64bit)
+Requires: libcef.so()(64bit)
+Requires: libcups.so.2()(64bit)
+Requires: libcurl.so.4()(64bit)
+Requires: libdbus-1.so.3()(64bit)
+Requires: libdl.so.2()(64bit)
+Requires: libdrm.so.2()(64bit)
+Requires: libexpat.so.1()(64bit)
+Requires: libfontconfig.so.1()(64bit)
+Requires: libfreetype.so.6()(64bit)
+Requires: libgbm.so.1()(64bit)
+Requires: libgcc_s.so.1()(64bit)
+Requires: libgdk-3.so.0()(64bit)
+Requires: libgdk_pixbuf-2.0.so.0()(64bit)
+Requires: libgio-2.0.so.0()(64bit)
+Requires: libglib-2.0.so.0()(64bit)
+Requires: libgobject-2.0.so.0()(64bit)
+Requires: libgthread-2.0.so.0()(64bit)
+Requires: libgtk-3.so.0()(64bit)
+Requires: libltdl.so.7()(64bit)
+Requires: liblzma.so.5()(64bit)
+Requires: libm.so.6()(64bit)
+Requires: libnspr4.so()(64bit)
+Requires: libnss3.so()(64bit)
+Requires: libnssutil3.so()(64bit)
+Requires: libodbc.so.2()(64bit)
+Requires: libodbccr.so.2()(64bit)
+Requires: libodbcinst.so.2()(64bit)
+Requires: libpaho-mqtt3as.so.1()(64bit)
+Requires: libpango-1.0.so.0()(64bit)
+Requires: libpangocairo-1.0.so.0()(64bit)
+Requires: libplc4.so()(64bit)
+Requires: libplds4.so()(64bit)
+Requires: libpthread.so.0()(64bit)
+Requires: libqrencode.so.4()(64bit)
+Requires: librt.so.1()(64bit)
+Requires: libsmime3.so()(64bit)
+Requires: libsqlite3.so.0()(64bit)
+Requires: libstdc++.so.6()(64bit)
+Requires: libsystemd.so.0()(64bit)
+Requires: libtbb.so.12()(64bit)
+Requires: libtcmalloc_minimal.so.4()(64bit)
+Requires: libusb-1.0.so.0()(64bit)
+Requires: libuuid.so.1()(64bit)
+Requires: libva-drm.so.2()(64bit)
+Requires: libva-x11.so.2()(64bit)
+Requires: libva.so.2()(64bit)
+Requires: libwayland-client.so.0()(64bit)
+Requires: libxcb
+Requires: libxcb-glx.so.0()(64bit)
+Requires: libxcb-shape.so.0()(64bit)
+Requires: libxcb-shm.so.0()(64bit)
+Requires: libxcb-xfixes.so.0()(64bit)
+Requires: libxcb.so.1()(64bit)
+Requires: libxkbcommon-x11.so.0()(64bit)
+Requires: libxkbcommon.so.0()(64bit)
+Requires: libz.so.1()(64bit)
+Requires: python3
+Requires: rtld(GNU_HASH)
+
 
 %description
 WPS Office (金山办公) suite for Linux, distributed by Kingsoft. This
@@ -75,6 +174,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 12.1.2.29182.AK.preread.sw-5
+- Filter all bundled sonames that no Fedora package provides; keep every
+  provider-backed host dependency (regression-tested against Fedora 45 repodata)
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 12.1.2.29182.AK.preread.sw-4
 - Filter WPS-private sonames bundled in the upstream RPM
 

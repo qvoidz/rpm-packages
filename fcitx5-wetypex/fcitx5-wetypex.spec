@@ -6,14 +6,14 @@
 # exposing them as soname provides (would shadow the real Fedora packages).
 %global __provides_exclude ^.*$
 # libkqueue is bundled in the upstream RPM; it is not a Fedora runtime dependency.
-%global __requires_exclude ^libkqueue\.so\.0(\(|$)
+%global __requires_exclude ^.*$
 ExclusiveArch:  x86_64
 
 Name:           fcitx5-wetypex
 Version:        3.0.1.684
 # Repack counter (.2) forces an upgrade over the -9 COPR build for the same
 # upstream release; check-updates.py drops it on the next upstream tag bump.
-Release:        %{upstream_rel}.3%{?dist}
+Release:        %{upstream_rel}.5%{?dist}
 Summary:        WeTypeX input method adapter for Fcitx5
 License:        GPL-3.0-or-later
 URL:            https://github.com/panxuc/fcitx5-wetypex
@@ -47,6 +47,71 @@ Requires:       /usr/bin/opencc
 Requires:       wl-clipboard
 Requires:       libnotify
 Requires:       polkit
+
+# Explicit host dependencies (auto-generated from Fedora 45 repodata; bundled private sonames excluded)
+Requires: bubblewrap
+Requires: ca-certificates
+Requires: fcitx5
+Requires: fcitx5-qt-libfcitx5qt6widgets
+Requires: fontconfig
+Requires: glibc
+Requires: json-c
+Requires: layer-shell-qt
+Requires: ld-linux-x86-64.so.2()(64bit)
+Requires: libFcitx5Config.so.6()(64bit)
+Requires: libFcitx5Core.so.7()(64bit)
+Requires: libFcitx5Qt6WidgetsAddons.so.2()(64bit)
+Requires: libFcitx5Utils.so.2()(64bit)
+Requires: libGLX.so.0()(64bit)
+Requires: libIMECore.so.0()(64bit)
+Requires: libIMEPinyin.so.0()(64bit)
+Requires: libLayerShellQtInterface.so.6()(64bit)
+Requires: libOpenGL.so.0()(64bit)
+Requires: libQt6Core.so.6()(64bit)
+Requires: libQt6DBus.so.6()(64bit)
+Requires: libQt6Gui.so.6()(64bit)
+Requires: libQt6Network.so.6()(64bit)
+Requires: libQt6OpenGL.so.6()(64bit)
+Requires: libQt6Positioning.so.6()(64bit)
+Requires: libQt6PrintSupport.so.6()(64bit)
+Requires: libQt6Qml.so.6()(64bit)
+Requires: libQt6QmlMeta.so.6()(64bit)
+Requires: libQt6QmlModels.so.6()(64bit)
+Requires: libQt6QmlWorkerScript.so.6()(64bit)
+Requires: libQt6Quick.so.6()(64bit)
+Requires: libQt6Svg.so.6()(64bit)
+Requires: libQt6WebChannel.so.6()(64bit)
+Requires: libQt6WebEngineCore.so.6()(64bit)
+Requires: libQt6WebEngineWidgets.so.6()(64bit)
+Requires: libQt6Widgets.so.6()(64bit)
+Requires: libc++.so.1()(64bit)
+Requires: libc++abi.so.1()(64bit)
+Requires: libc.so.6()(64bit)
+Requires: libcrypto.so.3()(64bit)
+Requires: libfontconfig.so.1()(64bit)
+Requires: libfreetype.so.6()(64bit)
+Requires: libgcc_s.so.1()(64bit)
+Requires: libime
+Requires: libjson-c.so.5()(64bit)
+Requires: libm.so.6()(64bit)
+Requires: libnotify
+Requires: libssl.so.3()(64bit)
+Requires: libstdc++.so.6()(64bit)
+Requires: libwayland-client
+Requires: libwayland-client.so.0()(64bit)
+Requires: openssl-libs
+Requires: pipewire-utils
+Requires: polkit
+Requires: python3
+Requires: python3-fonttools
+Requires: python3-pillow
+Requires: qt6-qtbase
+Requires: qt6-qtsvg
+Requires: qt6-qtwebengine
+Requires: rtld(GNU_HASH)
+Requires: util-linux
+Requires: wl-clipboard
+
 
 %description
 WeTypeX adapter for Fcitx5. The proprietary WeTypeX runtime is not bundled;
@@ -104,6 +169,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-upstream_rel.4
+- Filter all bundled sonames that no Fedora package provides; keep every
+  provider-backed host dependency (regression-tested against Fedora 45 repodata)
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-9.3
 - Filter the bundled libkqueue soname from automatic runtime requirements
 
