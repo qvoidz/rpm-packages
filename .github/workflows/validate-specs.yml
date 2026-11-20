@@ -38,6 +38,17 @@ jobs:
       - name: Parse every spec and validate RPM metadata
         run: bash scripts/check-specs.sh
 
+      - name: Build Zed RPM and execute its %check section
+        run: |
+          dnf install -y curl
+          topdir="$HOME/rpmbuild"
+          mkdir -p "$topdir"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+          source_url="$(rpmspec -P zed/zed.spec | awk '$1 == "Source0:" { print $2; exit }')"
+          test -n "$source_url"
+          curl --fail --location --retry 3 "$source_url" -o "$topdir/SOURCES/zed-linux-x86_64.tar.gz"
+          cp zed/zed.spec "$topdir/SPECS/zed.spec"
+          rpmbuild -bb --nodeps --define "_topdir $topdir" "$topdir/SPECS/zed.spec"
+
       - name: Validate workflow YAML syntax
         run: |
           python3 - <<'PY'
