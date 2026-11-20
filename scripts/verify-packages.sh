@@ -11,14 +11,14 @@
 # 网易云安装时还会从网易 CDN 额外下载官方载荷，需要国内网络）。
 set -u
 
-PACKAGES=(flclash fcitx5-wetypex flyline wechat workbuddy linuxqq wemeet iptvnator
+PACKAGES=(FlClash fcitx5-wetypex flyline wechat workbuddy linuxqq wemeet iptvnator
           waydroid-script nerd-fonts-cascadia-code lazyvim zed starship qqmusic
           wps-office dingtalk netease-cloud-music edge-repo vscode-repo)
 
 # 安装后：检查代表性文件是否就位
 check_installed() {
     case "$1" in
-        flclash)         rpm -ql flclash        | grep -qE 'bin/FlClash' ;;
+        FlClash)         rpm -ql FlClash        | grep -qE 'bin/FlClash' ;;
         fcitx5-wetypex)  rpm -ql fcitx5-wetypex | grep -qE 'bin/|fcitx5' ;;
         flyline)         [ -f /usr/lib64/flyline/libflyline.so ] && [ -f /etc/profile.d/flyline.sh ] ;;
         wechat)          rpm -ql wechat         | grep -qE 'bin/' ;;

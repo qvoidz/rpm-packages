@@ -4,7 +4,9 @@
 Packages and their upstream sources:
 
 - flclash        GitHub releases of chen08209/FlClash (tag v<version>,
-                 asset FlClash-<version>-linux-amd64.rpm).
+                 asset FlClash-<version>-linux-amd64.rpm). COPR package name
+                 is FlClash (spec Name:), same as upstream's own RPM;
+                 the folder/spec-file name stays lowercase "flclash".
 - fcitx5-wetypex GitHub releases of panxuc/fcitx5-wetypex
                  (tag v<version>-<upstream_rel>, asset
                  fcitx5-wetypex-<version>-<upstream_rel>.x86_64.rpm).
@@ -200,6 +202,8 @@ def require_asset(release, name):
 
 
 def sync_flclash(dry_run):
+    # Folder/spec-file name is "flclash"; the COPR package (spec Name:) is
+    # "FlClash", same as upstream's own RPM, so upgrades apply in place.
     spec = read_spec("flclash")
     current = spec_field(spec, "Version")
     release = latest_release(FLCLASH_REPO)
@@ -208,14 +212,16 @@ def sync_flclash(dry_run):
         raise RuntimeError(f"Unexpected FlClash tag format: {tag}")
     version = tag[1:]
     if rpm_vercmp(version, current) <= 0:
-        return f"flclash: up to date ({current})"
+        return f"FlClash: up to date ({current})"
     require_asset(release, f"FlClash-{version}-linux-amd64.rpm")
     if not dry_run:
         write_spec("flclash", bump_spec(
             "flclash", spec, version, "1%{?dist}",
             f"Update to upstream FlClash {tag}"))
-    CHANGED.append("flclash")
-    return f"flclash: {current} -> {version}"
+    # CHANGED entries are COPR package names: the CI workflow appends them to
+    # $COPR_WEBHOOK_BASE/$pkg/ to fire per-package rebuild webhooks.
+    CHANGED.append("FlClash")
+    return f"FlClash: {current} -> {version}"
 
 
 def sync_wetypex(dry_run):
