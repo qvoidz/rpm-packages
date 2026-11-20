@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: write
-  actions: write # GITHUB_TOKEN may dispatch workflow_dispatch, but needs Actions write permission.
+  actions: write # Required for GITHUB_TOKEN to dispatch mirror.yml.
 
 concurrency:
   group: copr-update
@@ -40,39 +40,58 @@ jobs:
           git commit -m "Auto-update specs: ${{ steps.bump.outputs.changed }}"
           git push
 
-      - name: Dispatch and wait for payload mirror (linuxqq / netease-cloud-music)
-        if: steps.bump.outputs.changed != ''
+      - name: Ensure payload mirror assets exist
+        id: mirror
+        if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          need=""
-          for pkg in ${{ steps.bump.outputs.changed }}; do
-            case " linuxqq netease-cloud-music " in
-              *" $pkg "*) need=1 ;;
-            esac
-          done
-          if [ -z "$need" ]; then
-            echo "No payload-mirrored package was bumped; nothing to wait for."
+          # GITHUB_TOKEN pushes do not trigger push-based workflows. Also check
+          # assets on every scheduled run: a previous CDN failure must not leave
+          # a bumped spec permanently stuck after the version detector says
+          # "up to date" on subsequent days.
+          missing=""
+          version=$(sed -n 's/^Version:[[:space:]]*//p' linuxqq/linuxqq.spec | head -1)
+          url=$(sed -n 's/^%global qq_rpm_url[[:space:]]*//p' linuxqq/linuxqq.spec)
+          tag="linuxqq-$version"
+          asset=$(basename "$url")
+          if ! gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset"; then
+            missing="$missing linuxqq"
+          fi
+
+          version=$(sed -n 's/^Version:[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec | head -1)
+          url=$(sed -n 's/^%global netease_deb_url[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec)
+          tag="netease-cloud-music-$version"
+          asset=$(basename "$url")
+          if ! gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset"; then
+            missing="$missing netease-cloud-music"
+          fi
+
+          missing=$(echo "$missing" | xargs)
+          if [ -z "$missing" ]; then
+            echo "All payload mirror assets already exist."
+            echo "mirror_rebuilds=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # A push made with GITHUB_TOKEN does NOT trigger another workflow's
-          # push event. Dispatch explicitly; workflow_dispatch is the documented
-          # exception and works with this token when actions: write is granted.
+          echo "Missing mirror assets for:$missing"
           head=$(git rev-parse HEAD)
-          echo "Dispatching mirror.yml for $head"
+
+          # workflow_dispatch is explicitly allowed to create a run when called
+          # with GITHUB_TOKEN. The push event above is not.
           gh workflow run mirror.yml --ref main
 
+          completed=false
           for i in $(seq 1 90); do
             st=$(HEAD_SHA="$head" gh api "repos/$GH_REPO/actions/workflows/mirror.yml/runs?per_page=20" \
               --jq '.workflow_runs[] | select(.head_sha == env.HEAD_SHA) | .status + " " + (.conclusion // "")' \
               | head -1 || true)
             echo "mirror on $head: ${st:-not started yet} ($i/90)"
             case "$st" in
-              "completed success") break ;;
+              "completed success") completed=true; break ;;
               "completed failure"|"completed cancelled"|"completed timed_out")
                 echo "::error::Mirror workflow ended with: $st"
                 exit 1
@@ -80,39 +99,38 @@ jobs:
             esac
             sleep 20
           done
-          if [ "$i" -eq 90 ] && [ "$st" != "completed success" ]; then
+          if [ "$completed" != true ]; then
             echo "::error::Mirror did not complete within 30 minutes"
             exit 1
           fi
 
-          # A successful mirror workflow can intentionally skip NetEase when
-          # its CDN blocks datacenter downloads. Do not submit a COPR build
-          # unless the exact asset referenced by the new spec really exists.
-          for pkg in ${{ steps.bump.outputs.changed }}; do
+          # A successful mirror workflow may skip NetEase if its CDN blocks
+          # datacenter downloads. Verify the exact expected assets, and leave
+          # the package out of COPR until a later daily retry succeeds.
+          for pkg in $missing; do
             case "$pkg" in
               linuxqq)
                 version=$(sed -n 's/^Version:[[:space:]]*//p' linuxqq/linuxqq.spec | head -1)
                 url=$(sed -n 's/^%global qq_rpm_url[[:space:]]*//p' linuxqq/linuxqq.spec)
-                tag="linuxqq-$version"
-                asset=$(basename "$url")
                 ;;
               netease-cloud-music)
                 version=$(sed -n 's/^Version:[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec | head -1)
                 url=$(sed -n 's/^%global netease_deb_url[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec)
-                tag="netease-cloud-music-$version"
-                asset=$(basename "$url")
                 ;;
-              *) continue ;;
             esac
+            tag="$pkg-$version"
+            asset=$(basename "$url")
             if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$asset"; then
-              echo "::error::Required mirror asset is missing: release=$tag asset=$asset"
+              echo "::error::Required mirror asset is still missing: release=$tag asset=$asset"
               exit 1
             fi
             echo "Verified mirror asset: $tag/$asset"
           done
 
+          echo "mirror_rebuilds=$missing" >> "$GITHUB_OUTPUT"
+
       - name: Trigger COPR builds via package webhooks
-        if: steps.bump.outputs.changed != ''
+        if: steps.bump.outputs.changed != '' || steps.mirror.outputs.mirror_rebuilds != ''
         env:
           COPR_WEBHOOK_BASE: ${{ secrets.COPR_WEBHOOK_BASE }}
         run: |
@@ -122,7 +140,8 @@ jobs:
             exit 1
           fi
           base="${COPR_WEBHOOK_BASE%/}"
-          for pkg in ${{ steps.bump.outputs.changed }}; do
+          for pkg in ${{ steps.bump.outputs.changed }} ${{ steps.mirror.outputs.mirror_rebuilds }}; do
+            [ -n "$pkg" ] || continue
             echo "Triggering COPR rebuild for $pkg ..."
             curl --retry 3 --retry-all-errors --retry-delay 5 -fsS -X POST "$base/$pkg/"
           done
