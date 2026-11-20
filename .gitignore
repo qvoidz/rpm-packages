@@ -4,3 +4,6 @@
 # Local sync working directory
 public/
 .Trash-0/
+.mach
+.mach-dnflog
+.mach-bootstrap.log
