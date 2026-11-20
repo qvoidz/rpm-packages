@@ -2,7 +2,7 @@
 %global __os_install_post %{nil}
 
 # Bundled libraries with no Fedora provider (shipped in the payload):
-%global __requires_exclude ^(libbz2\.so\.1\.0|libksailite|libmysqlclient|libpeony)
+%global __requires_exclude ^(libbz2\.so\.1\.0|libksailite|libmysqlclient|libpeony|libwppapi|libwppcore|libwpsapi|libwpsapiex|libwpsbox|libwpscore|libwpsio|libwpsuil|libwpswordtool|libxercesc3)
 # The payload also bundles its own copies of common system libraries
 # (libstdc++, libgcc_s, libc++abi, ...). rpm's automatic generator turns
 # them into soname Provides, shadowing the real Fedora providers: dnf may
@@ -17,7 +17,7 @@
 # for the upstream version and rewrites Version when it advances.
 Name:           wps-office
 Version:        12.1.2.29182.AK.preread.sw
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        WPS Office - Kingsoft office suite for Linux
 License:        LicenseRef-Kingsoft-WPS-Office-License
 URL:            https://linux.wps.cn/
@@ -75,6 +75,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 12.1.2.29182.AK.preread.sw-4
+- Filter WPS-private sonames bundled in the upstream RPM
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
