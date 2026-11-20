@@ -8,6 +8,10 @@
 # soname requires. Suppress all auto-generated provides; the package's own
 # name provides are intrinsic and unaffected.
 %global __provides_exclude ^.*$
+# The Ubuntu 19.04 payload carries these legacy ABI libraries privately;
+# do not turn them into Fedora package dependencies. Keep the explicit
+# host compatibility requirements (libxcrypt and libnsl) below.
+%global __requires_exclude ^(libutil-setid\\.so\\.0|libutil-tdb\\.so\\.0|libvpx\\.so\\.5|libwacom\\.so\\.2|libwebp\\.so\\.6|libwinbind-client\\.so\\.0|libwind-samba4\\.so\\.0|libx264\\.so\\.152|libx265\\.so\\.146)(\\(|$)
 # Bare asset URL, rewritten automatically by scripts/check-updates.py from
 # the official download page (the upstream client has been frozen at 1.2.1
 # since 2019). NetEase's CDN (d1.music.126.net) 403s bare requests and, like
@@ -20,7 +24,7 @@
 
 Name:           netease-cloud-music
 Version:        1.2.1
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        NetEase Cloud Music (网易云音乐) desktop client for Linux
 License:        LicenseRef-NetEase-CloudMusic-Software-License
 URL:            https://music.163.com/
@@ -82,6 +86,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.2.1-5
+- Filter legacy Ubuntu payload sonames unavailable on Fedora 45
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 1.2.1-3
