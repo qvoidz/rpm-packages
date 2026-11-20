@@ -204,3 +204,11 @@ jobs:
                 ;;
             esac
           done
+
+      - name: Report upstream update-check failures
+        if: steps.bump.outputs.errors != ''
+        env:
+          FAILED_PACKAGES: ${{ steps.bump.outputs.errors }}
+        run: |
+          echo "::error::Upstream version checks failed for: $FAILED_PACKAGES"
+          exit 1
