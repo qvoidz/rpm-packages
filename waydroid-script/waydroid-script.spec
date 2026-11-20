@@ -6,8 +6,10 @@
 
 # The bundle carries Android ARM ELF helpers under bin/ (resetprop etc.),
 # so this cannot be noarch; disable build-side binary processing so
-# brp-strip does not touch the foreign-arch ELFs.
+# brp-strip does not touch the foreign-arch ELFs (and disable the debug
+# package, whose source list would be empty without brp-strip).
 %global __os_install_post %{nil}
+%global debug_package %{nil}
 
 # InquirerPy and pfzy are not packaged in Fedora; they are vendored from
 # pinned PyPI wheels into the package directory and put on PYTHONPATH by
