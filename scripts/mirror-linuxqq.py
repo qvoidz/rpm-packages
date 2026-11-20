@@ -89,6 +89,9 @@ def main():
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--build", action="store_true",
                         help="trigger the COPR build after mirroring")
+    parser.add_argument("--file", type=pathlib.Path, default=None,
+                        help="use an already-downloaded RPM instead of "
+                             "fetching it from Tencent's CDN")
     args = parser.parse_args()
 
     version, official_url = current_official()
@@ -114,16 +117,21 @@ def main():
         print(f"dry-run: would mirror {asset_name} into release {tag}")
         return
 
-    # 1. Download the RPM (needs China network access).
-    target = ROOT / ".workbuddy" / "tmp"
-    target.mkdir(parents=True, exist_ok=True)
-    rpm_path = target / asset_name
-    print(f"downloading {asset_name} ...")
-    urllib.request.urlretrieve(official_url, rpm_path)
+    # 1. Get the RPM: use --file, otherwise download (needs China network).
+    if args.file:
+        rpm_path = args.file.resolve()
+        if not rpm_path.is_file():
+            raise FileNotFoundError(rpm_path)
+    else:
+        target = ROOT / ".workbuddy" / "tmp"
+        target.mkdir(parents=True, exist_ok=True)
+        rpm_path = target / asset_name
+        print(f"downloading {asset_name} ...")
+        urllib.request.urlretrieve(official_url, rpm_path)
     size = rpm_path.stat().st_size
     if size < 100 * 1024 * 1024:
-        raise RuntimeError(f"downloaded file too small ({size} bytes)")
-    print(f"downloaded {size / 1e6:.0f} MB")
+        raise RuntimeError(f"RPM file too small ({size} bytes)")
+    print(f"using {rpm_path.name} ({size / 1e6:.0f} MB)")
 
     # 2. Create the release if needed.
     if release is None:
