@@ -1,0 +1,48 @@
+name: Validate RPM specs
+
+on:
+  push:
+    branches:
+      - main
+      - "fix/**"
+    paths:
+      - "**/*.spec"
+      - "scripts/check-specs.sh"
+      - "scripts/verify-packages.sh"
+      - ".github/workflows/validate-specs.yml"
+  pull_request:
+    paths:
+      - "**/*.spec"
+      - "scripts/check-specs.sh"
+      - "scripts/verify-packages.sh"
+      - ".github/workflows/validate-specs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fedora-45-specs:
+    runs-on: ubuntu-latest
+    container: fedora:45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install RPM validation tools
+        run: |
+          dnf install -y rpm-build rpmlint ShellCheck
+
+      - name: Parse every spec and validate RPM metadata
+        run: bash scripts/check-specs.sh
+
+      - name: Check shell scripts
+        run: |
+          bash -n scripts/check-specs.sh scripts/verify-packages.sh
+          shellcheck scripts/check-specs.sh scripts/verify-packages.sh
+
+      - name: Run rpmlint (report only)
+        continue-on-error: true
+        run: |
+          find . -mindepth 2 -maxdepth 2 -type f -name '*.spec' -print0 \
+            | xargs -0 -r rpmlint -i
