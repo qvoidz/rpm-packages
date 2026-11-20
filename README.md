@@ -106,7 +106,9 @@ COPR 通过 HTTPS 提供软件包，上游 RPM 的字节保持原样，不用项
 - 对 shell 脚本执行语法检查和 ShellCheck；
 - 运行 `rpmlint` 并保留诊断输出（当前作为报告项，不把所有 lint warning 当作构建失败）。
 
-在已启用本 COPR 的 Fedora 45 x86_64 测试机上，可以逐包验证真实安装与卸载：
+也可以在 GitHub Actions 手动运行 **Test COPR package installation** 工作流。默认测试全部 19 个包，也可以在 `packages` 输入框填写空格分隔的包名。该工作流使用干净的 Fedora 45 容器，从已经发布的 COPR 仓库安装，因此验证的是当前已发布版本；分支中尚未发布的 SPEC 仍需合并并构建后才能做真实安装测试。
+
+在已启用本 COPR 的 Fedora 45 x86_64 测试机上，也可以逐包验证真实安装与卸载：
 
 ```bash
 sudo bash scripts/verify-packages.sh
