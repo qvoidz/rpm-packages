@@ -52,12 +52,12 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 
 因此 [`mirror.yml`](.github/workflows/mirror.yml) 在 GitHub Actions runner 上：
 
-1. 从 spec 读取裸链（镜像 spec 需要的版本，不追官方配置的"当前版"——腾讯回滚过版本，配置会摆动）；
+1. 从 spec 读取裸链（镜像 spec 需要的版本，不追官方配置的“当前版”——腾讯回滚过版本，配置会摆动）；
 2. QQ：调腾讯公开签名接口 `GetSign`（nixpkgs 同方案）换临时链下载；网易云：带 Referer 直接下载；
 3. 校验后发布为 GitHub Release 资产（tag `linuxqq-<版本>` / `netease-cloud-music-<版本>`），spec 的 `Source0` 指向它，COPR 构建期正常拉取；
 4. 下载用 16 分片并行 + 断点续传（qqdl 对海外单连接限速严重，单流 45 分钟都拖不完）。
 
-`copr-auto-update` 触发 COPR 前会先等镜像 workflow 完成，消除"资产未就位构建先跑"的竞态。
+`GITHUB_TOKEN` 推送的提交不会触发其他工作流的普通 `push` 事件，因此 `copr-auto-update` 会显式 dispatch `mirror.yml`，并校验对应 Release 资产确实存在后才触发 COPR。每天也会检查已配置版本的镜像资产；如果 CDN 暂时不可用，后续定时运行会重试，不会把缺失的载荷提交给 COPR 构建。
 
 ## 自动更新
 
@@ -80,11 +80,11 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 发现新版本后，工作流自动完成：
 
 1. 改写 spec（`Version`、`Release`、changelog）并以 `github-actions[bot]` 身份提交；
-2. 等待 `mirror.yml` 就位新版本的载荷资产（仅 linuxqq / netease-cloud-music）；
+2. 对需要镜像的包显式启动 `mirror.yml`，并确认对应 Release 资产存在；
 3. 向 COPR 的包 webhook 发送 POST，COPR 用刚推送的 spec 重建变更的包；
 4. 用户侧 `sudo dnf upgrade` 即可获得更新。
 
-触发机制没有有效期：COPR 的 webhook secret 不过期，GitHub Actions 由仓库自带的 `GITHUB_TOKEN` 驱动。整个更新链路无需人工维护。
+另外，若 Linux QQ / 网易云音乐的最近一次 COPR 构建失败，工作流只会在没有正在运行的构建时重试，避免重复提交任务。
 
 ## COPR 配置说明
 
