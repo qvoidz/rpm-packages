@@ -8,6 +8,7 @@ on:
     paths:
       - "**/*.spec"
       - "scripts/check-specs.sh"
+      - "scripts/check-requires-filters.py"
       - "scripts/check-updates.py"
       - "scripts/verify-packages.sh"
       - ".github/workflows/**"
