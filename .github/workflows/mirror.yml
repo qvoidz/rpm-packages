@@ -74,6 +74,7 @@ jobs:
           BARE: ${{ steps.resolve.outputs.bare }}
           WANT: linuxqq-${{ steps.resolve.outputs.version }}
         run: |
+          exec > mirror-debug.log 2>&1
           set -x
           signed=$(curl -fsSL --retry 5 --retry-delay 3 \
             -H 'Content-Type: application/json' \
@@ -100,6 +101,10 @@ jobs:
           total=$(curl -fsSL -r 0-0 -o /dev/null -D - "$dl" \
             | awk 'tolower($1) ~ /^content-range:/ {gsub("\r",""); n=split($2,a,"/"); print a[n]}')
           echo "payload size: $total bytes"
+          if [ -z "$total" ]; then
+            # Server ignored the range request; fall back to one stream.
+            curl -fsSL --retry 5 --retry-delay 3 -o payload.rpm "$dl"
+          else
           test -n "$total"
           sudo apt-get update -qq && sudo apt-get install -y -qq rpm >/dev/null
 
@@ -133,8 +138,9 @@ jobs:
             echo "round $round: $got / $total bytes"
             [ "$done_all" = 1 ] && break
           done
-          cat payload.part.[0-9][0-9] > payload.rpm
-          test "$(stat -c%s payload.rpm)" = "$total"
+            cat payload.part.[0-9][0-9] > payload.rpm
+            test "$(stat -c%s payload.rpm)" = "$total"
+          fi
           info=$(rpm -qp --qf '%{NAME}-%{VERSION}' payload.rpm)
           echo "payload RPM: $info"
           # upstream appends its internal build number: 3.2.35_54395
@@ -156,6 +162,24 @@ jobs:
             || true
           gh release upload "$TAG" "$ASSET" --clobber
           echo "Published $ASSET on release $TAG"
+
+      - name: Save debug log to a branch
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          test -f mirror-debug.log || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch -q origin mirror-debug || true
+          git checkout -q -B mirror-debug origin/mirror-debug 2>/dev/null \
+            || git checkout -q --orphan mirror-debug
+          git rm -rq . 2>/dev/null || true
+          cp mirror-debug.log .
+          git add -f mirror-debug.log
+          git commit -qm "mirror debug log (auto, $(date -u +%FT%TZ))"
+          git push -qf origin mirror-debug
+          echo "Debug log pushed to the mirror-debug branch"
 
   netease-cloud-music:
     name: Probe NetEase CDN from a datacenter
