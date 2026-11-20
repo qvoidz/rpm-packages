@@ -31,7 +31,7 @@ jobs:
 
       - name: Install RPM validation tools
         run: |
-          dnf install -y rpm-build rpmlint ShellCheck
+          dnf install -y rpm-build ShellCheck
 
       - name: Parse every spec and validate RPM metadata
         run: bash scripts/check-specs.sh
@@ -40,9 +40,3 @@ jobs:
         run: |
           bash -n scripts/check-specs.sh scripts/verify-packages.sh
           shellcheck scripts/check-specs.sh scripts/verify-packages.sh
-
-      - name: Run rpmlint (report only)
-        continue-on-error: true
-        run: |
-          find . -mindepth 2 -maxdepth 2 -type f -name '*.spec' -print0 \
-            | xargs -0 -r rpmlint -i
