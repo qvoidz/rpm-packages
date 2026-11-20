@@ -18,7 +18,7 @@
 
 Name:           linuxqq
 Version:        3.2.35
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
@@ -49,9 +49,32 @@ first exchanges the URL for a short-lived signed one via Tencent's
 public signing API, then downloads and repacks the official RPM.
 
 %prep
+# Resolve via the chroot resolver when possible, falling back to
+# DNS-over-HTTPS over IP literals: COPR build chroots sometimes have no
+# working resolver (the systemd-resolved 127.0.0.53 stub on the builder is
+# unreachable inside the mock nspawn container, which killed build
+# 11366167 with "Could not resolve host" for every host).
+res_ip() {
+    ip=$(getent ahostsv4 "$1" 2>/dev/null | awk '{print $1; exit}')
+    if [ -z "$ip" ]; then
+        for r in "https://1.1.1.1/dns-query" "https://8.8.8.8/resolve"; do
+            ip=$(curl -fsS --max-time 15 "$r?name=$1&type=A" \
+                     -H 'accept: application/dns-json' \
+                 | tr '{,' '\n\n' | sed -n 's/.*"data":"\([0-9.]*\)".*/\1/p' \
+                 | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -1)
+            [ -n "$ip" ] && break
+        done
+    fi
+    [ -n "$ip" ] || { echo "linuxqq: cannot resolve $1" >&2; exit 1; }
+    echo "$ip"
+}
+im_ip=$(res_ip im.qq.com)
+dl_ip=$(res_ip qqdl.gtimg.cn)
+resolve_args="--resolve im.qq.com:443:$im_ip --resolve qqdl.gtimg.cn:443:$dl_ip"
+
 # Ask Tencent to sign the bare URL (falls back to it verbatim if the API
 # hiccups or a future release ships an unsigned path again).
-signed=$(curl -fsSL --retry 5 --retry-delay 3 \
+signed=$(curl -fsSL --retry 5 --retry-delay 3 $resolve_args \
     -H 'Content-Type: application/json' \
     -H 'x-oidb: {"uint32_command":"0x9b8e","uint32_service_type":1}' \
     -H 'Origin: https://im.qq.com' \
@@ -62,7 +85,7 @@ signed=$(curl -fsSL --retry 5 --retry-delay 3 \
 dl_url=${signed:-%{qq_rpm_url}}
 
 echo "linuxqq: downloading ..."
-curl -fsSL --retry 5 --retry-delay 3 -o qq.rpm "$dl_url"
+curl -fsSL --retry 5 --retry-delay 3 $resolve_args -o qq.rpm "$dl_url"
 test -s qq.rpm || { echo "linuxqq: empty download" >&2; exit 1; }
 
 # Sanity check: must be the official linuxqq RPM of the expected version.
@@ -105,6 +128,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-7
+- Resolve build hosts via DoH fallback: COPR chroots can lack a resolver
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-6
 - Own only the /opt payload tree plus upstream-owned dirs; leave /usr
   directories unowned to avoid conflicts with the filesystem package
