@@ -10,10 +10,17 @@
 # auto-generated provides; the package's own name provides are intrinsic
 # and unaffected.
 %global __provides_exclude ^.*$
+# rpm's ELF scanner also turns the payload's bundled private libraries
+# (libflutter_linux_gtk.so, the plugin libs, ...) into auto Requires that
+# Fedora cannot satisfy. With the old FlClash package (which provided those
+# sonames) obsoleted away in the same transaction, they would break dnf
+# resolution. Suppress them all; the explicit Requires below fully describe
+# the real host dependencies (everything else lives inside gtk3's closure).
+%global __requires_exclude ^.*$
 
 Name:           flclash
 Version:        0.9.4
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        A modern proxy client based on Clash
 License:        GPL-3.0-or-later
 URL:            https://github.com/chen08209/FlClash
@@ -21,6 +28,7 @@ Source0:        https://github.com/chen08209/FlClash/releases/download/v%{versio
 
 BuildRequires:  cpio
 BuildRequires:  rpm
+Requires:       gtk3
 Requires:       libsecret
 # This package replaced an earlier, differently-named build of upstream's
 # own RPM (Name: FlClash, capital F). Both ship identical file paths under
@@ -57,6 +65,10 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 0.9.4-5
+- Suppress auto-generated requires of bundled private libraries; they used
+  to be satisfied by the (now obsoleted) FlClash package's own provides
+- Declare the real host dependencies explicitly (gtk3, libsecret)
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 0.9.4-4
 - Obsolete/Provide FlClash: the old differently-named package owns the same
   /usr/share/FlClash paths and blocks installation with file conflicts
