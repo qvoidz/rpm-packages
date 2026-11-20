@@ -11,7 +11,7 @@
 # The Ubuntu 19.04 payload carries these legacy ABI libraries privately;
 # do not turn them into Fedora package dependencies. Keep the explicit
 # host compatibility requirements (libxcrypt and libnsl) below.
-%global __requires_exclude ^(libutil-setid\\.so\\.0|libutil-tdb\\.so\\.0|libvpx\\.so\\.5|libwacom\\.so\\.2|libwebp\\.so\\.6|libwinbind-client\\.so\\.0|libwind-samba4\\.so\\.0|libx264\\.so\\.152|libx265\\.so\\.146)(\\(|$)
+%global __requires_exclude ^(libutil-setid\.so\.0|libutil-tdb\.so\.0|libvpx\.so\.5|libwacom\.so\.2|libwebp\.so\.6|libwinbind-client\.so\.0|libwind-samba4\.so\.0|libx264\.so\.152|libx265\.so\.146)(\(|$)
 # Bare asset URL, rewritten automatically by scripts/check-updates.py from
 # the official download page (the upstream client has been frozen at 1.2.1
 # since 2019). NetEase's CDN (d1.music.126.net) 403s bare requests and, like
