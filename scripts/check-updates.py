@@ -197,8 +197,7 @@ def bump_spec(pkg, text, version, release, message, changelog_release=None):
     return text.replace("%changelog\n", "%changelog\n" + entry, 1)
 
 
-def waydroid_release_for_update(current_version, current_commit,
-                               version, commit, current_release):
+def waydroid_release_for_update(current_version, current_commit,                               version, commit, current_release):
     """Calculate a new Release when the pinned Waydroid commit changes."""
     order = rpm_vercmp(version, current_version)
     if order < 0 or (order == 0 and commit == current_commit):
@@ -266,7 +265,7 @@ def sync_wetypex(dry_run):
             f"%global upstream_rel {upstream_rel}", 1)
         write_spec("fcitx5-wetypex", bump_spec(
             "fcitx5-wetypex", spec, version, "%{upstream_rel}%{?dist}",
-            f"Update to upstream {tag}"))
+            f"Update to upstream {tag}", changelog_release=upstream_rel))
     CHANGED.append("fcitx5-wetypex")
     return f"fcitx5-wetypex: {current_version}-{current_rel} -> {version}-{upstream_rel}"
 
@@ -397,8 +396,7 @@ def sync_linuxqq(dry_run):
             f"found {matches}")
     official_url = matches[0]
     match = re.search(r"QQ_([\d.]+)_\d+_x86_64", official_url)
-    if not match:
-        raise RuntimeError(f"Cannot parse QQ version from URL: {official_url}")
+    if not match:        raise RuntimeError(f"Cannot parse QQ version from URL: {official_url}")
     version = match.group(1)
     if rpm_vercmp(version, current) <= 0:
         return f"linuxqq: up to date ({current})"
@@ -597,8 +595,7 @@ def sync_qqmusic(dry_run):
     spec = read_spec("qqmusic")
     current = spec_field(spec, "Version")
     req = urllib.request.Request(QQMUSIC_PAGE, headers=USER_AGENT)
-    with urllib.request.urlopen(req, timeout=60) as response:
-        page = response.read().decode("utf-8", "replace")
+    with urllib.request.urlopen(req, timeout=60) as response:        page = response.read().decode("utf-8", "replace")
     hits = re.findall(
         r"https://c\.y\.qq\.com/cgi-bin/file_redirect\.fcg\?[^\"'>\s]*"
         r"file=ecosfile_plink%2Fmusic_clntupate%2Flinux%2Fother%2F"
