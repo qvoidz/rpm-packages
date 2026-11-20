@@ -27,9 +27,9 @@ for spec in "${specs[@]}"; do
         continue
     fi
 
-    if ! metadata=$(rpmspec -q --qf '%{NAME}\\n%{VERSION}\\n%{RELEASE}\\n%{ARCH}\\n' "$spec" 2>&1); then
+    if ! metadata=$(rpmspec -q --qf '%{NAME}\n%{VERSION}\n%{RELEASE}\n%{ARCH}\n' "$spec" 2>&1); then
         echo "ERROR: RPM metadata query failed for $spec"
-        printf '%s\\n' "$metadata"
+        printf '%s\n' "$metadata"
         failed=1
         continue
     fi
@@ -41,7 +41,7 @@ for spec in "${specs[@]}"; do
     arch=${fields[3]:-}
     if [[ -z "$name" || -z "$version" || -z "$release" ]]; then
         echo "ERROR: Name/Version/Release is incomplete in $spec"
-        printf 'Metadata output: %q\\n' "$metadata"
+        printf 'Metadata output: %q\n' "$metadata"
         failed=1
         continue
     fi
@@ -58,7 +58,7 @@ for spec in "${specs[@]}"; do
         failed=1
     fi
 
-    if grep -qiE '^Source[0-9]*:.*\\.zip([[:space:]]|$)' "$spec"; then
+    if grep -qiE '^Source[0-9]*:.*\.zip([[:space:]]|$)' "$spec"; then
         if ! grep -q 'unzip' "$spec" || ! grep -qE '^%setup.*-T' "$spec"; then
             echo "ERROR: ZIP source in $spec must use %setup -T and unzip"
             failed=1
