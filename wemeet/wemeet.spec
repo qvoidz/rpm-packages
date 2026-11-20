@@ -10,7 +10,7 @@
 # and unaffected.
 %global __provides_exclude ^.*$
 # Tencent Meeting ships these private libraries in its .deb payload.
-%global __requires_exclude ^(libwemeet_(framework|migration|module_api|platform|qt|util)|libxcast(_codec)?|libxnn(_core|_media)?|libyuv)\\.so(\\(|$)
+%global __requires_exclude ^(libwemeet_(framework|migration|module_api|platform|qt|util)|libxcast(_codec)?|libxnn(_core|_media)?|libyuv)\.so(\(|$)
 # Tencent Meeting does not publish RPMs; this package repacks the official
 # x86_64 .deb from the official download API
 # https://meeting.tencent.com/web-service/query-download-info
