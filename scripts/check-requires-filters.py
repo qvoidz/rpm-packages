@@ -121,7 +121,7 @@ def main() -> int:
                 failures.append(f"{spec_name}: filter hides host requirement {requirement}")
         print(f"Checked {spec_name}: {len(requirements)} bundled sonames")
     if failures:
-        print("\\n".join(f"ERROR: {failure}" for failure in failures), file=sys.stderr)
+        print("\n".join(f"ERROR: {failure}" for failure in failures), file=sys.stderr)
         return 1
     print(f"Bundled runtime dependency filters passed ({len(CASES)} specs).")
     return 0
