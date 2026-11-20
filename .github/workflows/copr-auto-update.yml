@@ -91,3 +91,29 @@ jobs:
             curl -fsS -X POST "$COPR_WEBHOOK_BASE/$pkg/" \
               || echo "::warning::COPR webhook for $pkg failed"
           done
+
+      - name: Retry failed payload builds (COPR infra flakes)
+        if: always()
+        env:
+          COPR_WEBHOOK_BASE: ${{ secrets.COPR_WEBHOOK_BASE }}
+        run: |
+          # linuxqq / netease-cloud-music are the only packages whose
+          # Source0 assets come from the mirror workflow, so a broken COPR
+          # build of theirs leaves users without an upgradable package.
+          # COPR build chroots occasionally break infra-wide (rpmbuild
+          # randomly missing libstdc++/libsqlite3/libz for ~hours); re-fire
+          # their webhooks whenever the latest build is not "succeeded".
+          for pkg in linuxqq netease-cloud-music; do
+            st=$(curl -fsS \
+              "https://copr.fedorainfracloud.org/api_3/build/list?ownername=qvoidz&projectname=rpm-packages&packagename=$pkg&limit=1" \
+              | jq -r '.items[0].state')
+            if [ "$st" = "succeeded" ]; then
+              echo "$pkg: latest build succeeded, nothing to retry"
+            elif [ -z "$COPR_WEBHOOK_BASE" ]; then
+              echo "::warning::$pkg latest build is '$st' but COPR_WEBHOOK_BASE is not configured"
+            else
+              echo "$pkg: latest build is '$st', re-triggering"
+              curl -fsS -X POST "$COPR_WEBHOOK_BASE/$pkg/" \
+                || echo "::warning::$pkg retry webhook failed"
+            fi
+          done
