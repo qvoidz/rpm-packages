@@ -29,7 +29,8 @@ CascadiaCode.zip release asset.
 
 %install
 mkdir -p %{buildroot}%{_datadir}/fonts/%{name}
-install -m 0644 CascadiaCode/*.ttf %{buildroot}%{_datadir}/fonts/%{name}/
+find . -name '*.ttf' -exec install -m 0644 '{}' \
+    %{buildroot}%{_datadir}/fonts/%{name}/ ';'
 
 %post
 if command -v fc-cache >/dev/null 2>&1; then
