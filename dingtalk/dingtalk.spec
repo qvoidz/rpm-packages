@@ -4,7 +4,7 @@
 # Bundled libraries with no Fedora provider (shipped in the payload):
 # These legacy/private sonames are shipped inside the upstream .deb. Keep
 # Fedora-provided host dependencies (GTK, X11, audio, etc.) auto-generated.
-%global __requires_exclude ^(liblber|libldap|libpangox|libahencrypt_sdk|libaliumidsdk|libavcodec\\.so\\.61|libavformat\\.so\\.61|libavutil\\.so\\.59|libcalendar_sdk|libcef|libcrypto\\.so\\.1\\.1|libdt_resource_loader|libdtfbase|libdtnest(_module)?|libexiv2\\.so\\.14|libffmpeg|libgaea|libhttp_server|libicudata\\.so\\.63|libicui18n\\.so\\.63|libicuuc\\.so\\.63|libmeeting_sdk|libprgbase|libsession|libsodium\\.so\\.23|libssl\\.so\\.1\\.1|libswresample\\.so\\.5|libswscale\\.so\\.8|libsync|libutforpc|libxcb-util\\.so\\.0)(\\(|$)
+%global __requires_exclude ^(liblber|libldap|libpangox|libahencrypt_sdk|libaliumidsdk|libavcodec\.so\.61|libavformat\.so\.61|libavutil\.so\.59|libcalendar_sdk|libcef|libcrypto\.so\.1\.1|libdt_resource_loader|libdtfbase|libdtnest(_module)?|libexiv2\.so\.14|libffmpeg|libgaea|libhttp_server|libicudata\.so\.63|libicui18n\.so\.63|libicuuc\.so\.63|libmeeting_sdk|libprgbase|libsession|libsodium\.so\.23|libssl\.so\.1\.1|libswresample\.so\.5|libswscale\.so\.8|libsync|libutforpc|libxcb-util\.so\.0)(\(|$)
 # The payload also bundles its own copies of common system libraries
 # (libm, libGLX, libstdc++, ...). rpm's automatic generator turns them
 # into soname Provides, shadowing the real Fedora providers: dnf may pull
