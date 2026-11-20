@@ -7,7 +7,7 @@
 # name provides are intrinsic and unaffected.
 %global __provides_exclude ^.*$
 # libffmpeg is shipped inside the upstream application payload.
-%global __requires_exclude ^libffmpeg\\.so(\\(|$)
+%global __requires_exclude ^libffmpeg\.so(\(|$)
 # QQ Music does not publish RPMs; this package repacks the official
 # x86_64 .deb. Tencent signs download URLs, so Source0 points at the
 # official download page's file_redirect.fcg CGI, which generates a
