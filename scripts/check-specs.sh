@@ -27,16 +27,21 @@ for spec in "${specs[@]}"; do
         continue
     fi
 
-    query=$(rpmspec -q --qf '%{NAME}|%{VERSION}|%{RELEASE}|%{ARCH}\n' "$spec" 2>&1) || {
+    if ! metadata=$(rpmspec -q --qf '%{NAME}\\n%{VERSION}\\n%{RELEASE}\\n%{ARCH}\\n' "$spec" 2>&1); then
         echo "ERROR: RPM metadata query failed for $spec"
-        printf '%s\n' "$query"
+        printf '%s\\n' "$metadata"
         failed=1
         continue
-    }
+    fi
 
-    IFS='|' read -r name version release arch <<< "$query"
+    mapfile -t fields <<< "$metadata"
+    name=${fields[0]:-}
+    version=${fields[1]:-}
+    release=${fields[2]:-}
+    arch=${fields[3]:-}
     if [[ -z "$name" || -z "$version" || -z "$release" ]]; then
         echo "ERROR: Name/Version/Release is incomplete in $spec"
+        printf 'Metadata output: %q\\n' "$metadata"
         failed=1
         continue
     fi
@@ -53,10 +58,11 @@ for spec in "${specs[@]}"; do
         failed=1
     fi
 
-    if grep -qiE '^Source[0-9]*:.*\.zip([[:space:]]|$)' "$spec" &&
-       ! grep -q 'unzip' "$spec"; then
-        echo "ERROR: ZIP source in $spec must be unpacked with unzip, not the tar-based %setup macro"
-        failed=1
+    if grep -qiE '^Source[0-9]*:.*\\.zip([[:space:]]|$)' "$spec"; then
+        if ! grep -q 'unzip' "$spec" || ! grep -qE '^%setup.*-T' "$spec"; then
+            echo "ERROR: ZIP source in $spec must use %setup -T and unzip"
+            failed=1
+        fi
     fi
 
     if grep -q 'rpm2cpio' "$spec" &&
