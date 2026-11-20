@@ -4,7 +4,7 @@
 Packages and their upstream sources:
 
 - flclash        GitHub releases of chen08209/FlClash (tag v<version>,
-                 asset FlClash-dev-<version>-linux-amd64.rpm).
+                 asset FlClash-<version>-linux-amd64.rpm).
 - fcitx5-wetypex GitHub releases of panxuc/fcitx5-wetypex
                  (tag v<version>-<upstream_rel>, asset
                  fcitx5-wetypex-<version>-<upstream_rel>.x86_64.rpm).
@@ -209,7 +209,7 @@ def sync_flclash(dry_run):
     version = tag[1:]
     if rpm_vercmp(version, current) <= 0:
         return f"flclash: up to date ({current})"
-    require_asset(release, f"FlClash-dev-{version}-linux-amd64.rpm")
+    require_asset(release, f"FlClash-{version}-linux-amd64.rpm")
     if not dry_run:
         write_spec("flclash", bump_spec(
             "flclash", spec, version, "1%{?dist}",

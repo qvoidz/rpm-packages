@@ -17,7 +17,7 @@ Release:        3%{?dist}
 Summary:        A modern proxy client based on Clash
 License:        GPL-3.0-or-later
 URL:            https://github.com/chen08209/FlClash
-Source0:        https://github.com/chen08209/FlClash/releases/download/v%{version}/FlClash-dev-%{version}-linux-amd64.rpm
+Source0:        https://github.com/chen08209/FlClash/releases/download/v%{version}/FlClash-%{version}-linux-amd64.rpm
 
 BuildRequires:  cpio
 BuildRequires:  rpm
