@@ -11,7 +11,7 @@
 | [FlClash](https://github.com/chen08209/FlClash) | 上游 Linux x86_64 RPM |
 | [Fcitx5 WeTypeX](https://github.com/panxuc/fcitx5-wetypex) | 上游 x86_64 RPM |
 | [Flyline](https://github.com/HalFrgrd/flyline) | 上游 release 压缩包内的预编译 bash loadable |
-| [Linux QQ](https://im.qq.com/linuxqq/) | 安装器壳包（见下文说明） |
+| [Linux QQ](https://im.qq.com/linuxqq/) | 官方 x86_64 RPM 原样重打包（签名 CDN，见下文说明） |
 | [腾讯会议](https://meeting.tencent.com/) | 官方 x86_64 .deb 重打包为 RPM |
 | [iptvnator](https://github.com/4gray/iptvnator) | 上游 GitHub release 提供的 Linux x86_64 RPM |
 | [waydroid-script](https://github.com/casualsnek/waydroid_script) | Waydroid 装 GApps/Magisk/libhoudini 的 Python 工具 |
@@ -22,7 +22,7 @@
 | [QQ音乐](https://y.qq.com/) | 官方 x86_64 .deb 重打包为 RPM（签名跳转链） |
 | [WPS Office](https://linux.wps.cn/) | 官方滚动 RPM 原样重打包，版本从 RPM 头部嗅探 |
 | [钉钉](https://www.dingtalk.com/) | 官方 x86_64 .deb 重打包为 RPM |
-| [网易云音乐](https://music.163.com/) | 安装器壳包：安装期下载官方 .deb 并解包 |
+| [网易云音乐](https://music.163.com/) | 官方 x86_64 .deb 重打包为 RPM（Referer 防盗链 CDN） |
 | edge-repo | 装上后即可 `dnf install microsoft-edge-stable` |
 | vscode-repo | 装上后即可 `dnf install code` |
 
@@ -46,9 +46,18 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 2. `%install` 用 `rpm2cpio | cpio -idm` 原样解包并照搬文件清单；所有重打包 spec 都关闭 `debug_package` 和 `__os_install_post`，避免 brp-strip/compress/check-rpaths 修改或拒绝上游二进制中的 `${ORIGIN}` runpath；
 3. `%post`/`%postun` 只刷新桌面/图标缓存。
 
-### Linux QQ 的特别处理
+### 需要镜像的载荷（Linux QQ / 网易云音乐）
 
-腾讯的下载 CDN 拒绝所有机房 IP，任何构建机都拿不到安装包（COPR builder、GitHub runner、Cloudflare Workers 均实测被拒）。因此 linuxqq 是一个壳包：RPM 本体只有几 KB，`%post` 在**用户安装时**从腾讯官方地址下载载荷并解包（类似 flatpak 的 `extra-data` 机制），文件清单记录在 `/var/lib/linuxqq/filelist`，升级时对新旧清单做差集清理上游移除的文件，卸载时按清单删除。
+2026 年 10 月起，腾讯给 `qqdl.gtimg.cn` 的 QQNT 路径加了实时 URL 签名：裸链一律 HTTP 403（与出口 IP、Referer 无关），官网下载是先调签名接口换临时链。网易 CDN 则校验 Referer（裸请求 403，带 `Referer: music.163.com` 即可，机房 IP 也能下）。COPR 的二进制构建 chroot 是完全断网的（用 nettest 探测包实测，连 Fedora 自家镜像都不通），只有 SRPM 阶段有网且只能裸 GET——拿不到这两家的载荷。
+
+因此 [`mirror.yml`](.github/workflows/mirror.yml) 在 GitHub Actions runner 上：
+
+1. 从 spec 读取裸链（镜像 spec 需要的版本，不追官方配置的"当前版"——腾讯回滚过版本，配置会摆动）；
+2. QQ：调腾讯公开签名接口 `GetSign`（nixpkgs 同方案）换临时链下载；网易云：带 Referer 直接下载；
+3. 校验后发布为 GitHub Release 资产（tag `linuxqq-<版本>` / `netease-cloud-music-<版本>`），spec 的 `Source0` 指向它，COPR 构建期正常拉取；
+4. 下载用 16 分片并行 + 断点续传（qqdl 对海外单连接限速严重，单流 45 分钟都拖不完）。
+
+`copr-auto-update` 触发 COPR 前会先等镜像 workflow 完成，消除"资产未就位构建先跑"的竞态。
 
 ## 自动更新
 
@@ -71,8 +80,9 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 发现新版本后，工作流自动完成：
 
 1. 改写 spec（`Version`、`Release`、changelog）并以 `github-actions[bot]` 身份提交；
-2. 向 COPR 的包 webhook 发送 POST，COPR 用刚推送的 spec 重建变更的包；
-3. 用户侧 `sudo dnf upgrade` 即可获得更新。
+2. 等待 `mirror.yml` 就位新版本的载荷资产（仅 linuxqq / netease-cloud-music）；
+3. 向 COPR 的包 webhook 发送 POST，COPR 用刚推送的 spec 重建变更的包；
+4. 用户侧 `sudo dnf upgrade` 即可获得更新。
 
 触发机制没有有效期：COPR 的 webhook secret 不过期，GitHub Actions 由仓库自带的 `GITHUB_TOKEN` 驱动。整个更新链路无需人工维护。
 
@@ -83,6 +93,6 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 
 ## 信任模型
 
-COPR 通过 HTTPS 提供软件包，上游 RPM 的字节保持原样，不用项目密钥重新签名。GitHub release 资产会校验文件名与 API 提供的摘要；腾讯系包通过 HTTPS 下载并校验 RPM 元数据与 x86_64 架构；linuxqq 的载荷在安装期通过 HTTPS 从腾讯官方地址下载，信任级别等同于手动从官网下载。
+COPR 通过 HTTPS 提供软件包，上游 RPM 的字节保持原样，不用项目密钥重新签名。GitHub release 资产会校验文件名与 API 提供的摘要；腾讯系包通过 HTTPS 下载并校验 RPM 元数据与 x86_64 架构；QQ/网易云的载荷由 CI 经官方渠道（签名接口 / 带 Referer 的官方 CDN）镜像到 GitHub Releases，字节不改动，构建期还校验载荷的 RPM/deb 元数据与期望版本一致。
 
 这是个人维护的非官方仓库，与上游项目无隶属关系。
