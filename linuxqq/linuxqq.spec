@@ -10,6 +10,13 @@
 # auto-generated provides; the package's own name provides are intrinsic
 # and unaffected.
 %global __provides_exclude ^.*$
+# Same story on the requirement side: rpm's ELF scanner turns the payload's
+# NEEDED entries (openssl 1.1 sonames, bundled libbugly/libcrbase/
+# liblinux_compat.so) into auto Requires that Fedora cannot satisfy, even
+# though every one of those libraries ships inside the payload and is found
+# via "${ORIGIN}" runpaths. Suppress them all; the explicit Fedora-native
+# Requires below fully describe the real host dependencies.
+%global __requires_exclude ^.*$
 # Bare asset URL, bumped automatically by scripts/check-updates.py from
 # Tencent's download config (cdn-go.cn/.../rainbow/pcConfig.json). Tencent's
 # CDN (qqdl.gtimg.cn) rejects datacenter IPs, and since Oct 2026 every QQNT
@@ -23,7 +30,7 @@
 
 Name:           linuxqq
 Version:        3.2.35
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
@@ -97,6 +104,10 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-10
+- Suppress auto-generated requires of bundled libraries (openssl 1.1 sonames,
+  libbugly/libcrbase/liblinux_compat.so); they all ship in the payload and
+  resolve via "${ORIGIN}" runpaths, but made dnf fail transaction resolution
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-8
