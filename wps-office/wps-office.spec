@@ -44,7 +44,11 @@ echo "Source0 tracks WPS Office's official rolling RPM."
 mkdir -p %{buildroot}
 cd %{buildroot}
 rpm2cpio %{SOURCE0} | cpio -idm --quiet --no-absolute-filenames
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' | sort > %{_builddir}/%{name}-filelist
+# Wrap entries containing spaces in double quotes (supported by rpm >= 4.20
+# file lists); WPS ships template documents like "labor contract.dotm".
+find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
+    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }' \
+    | sort > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then

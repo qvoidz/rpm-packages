@@ -51,7 +51,9 @@ ar x %{SOURCE0} data.tar.xz
 tar xJf data.tar.xz
 rm -f data.tar.xz
 chmod 0755 %{buildroot}/opt/qqmusic/qqmusic 2>/dev/null || :
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' | sort > %{_builddir}/%{name}-filelist
+find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
+    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }' \
+    | sort > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
