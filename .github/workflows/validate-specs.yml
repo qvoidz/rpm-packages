@@ -8,14 +8,16 @@ on:
     paths:
       - "**/*.spec"
       - "scripts/check-specs.sh"
+      - "scripts/check-updates.py"
       - "scripts/verify-packages.sh"
-      - ".github/workflows/validate-specs.yml"
+      - ".github/workflows/**"
   pull_request:
     paths:
       - "**/*.spec"
       - "scripts/check-specs.sh"
+      - "scripts/check-updates.py"
       - "scripts/verify-packages.sh"
-      - ".github/workflows/validate-specs.yml"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
