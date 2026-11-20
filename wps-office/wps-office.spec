@@ -25,6 +25,8 @@ Source0:        https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linu
 
 ExclusiveArch:  x86_64
 BuildRequires:  coreutils
+BuildRequires:  cpio
+BuildRequires:  rpm
 
 # Requires mirror the upstream RPM header's dependency list.
 Requires:       cups-libs
