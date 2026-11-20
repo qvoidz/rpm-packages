@@ -73,6 +73,19 @@ WECHAT_HEADER_RANGE = "bytes=0-2097151"  # RPM lead + signature + header
 
 IPTVNATOR_REPO = "4gray/iptvnator"
 WAYDROID_REPO = "casualsnek/waydroid_script"
+NERDFONTS_REPO = "ryanoasis/nerd-fonts"
+LAZYVIM_REPO = "LazyVim/LazyVim"
+LAZYVIM_STARTER_COMMIT = "803bc181d7c0d6d5eeba9274d9be49b287294d99"
+ZED_REPO = "zed-industries/zed"
+STARSHIP_REPO = "starship/starship"
+QQMUSIC_PAGE = "https://y.qq.com/download/download.html"
+WPS_ROLLING_URL = ("https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/"
+                   "download/linux/wps-office.rpm")
+WPS_HEADER_RANGE = "bytes=0-4194303"  # WPS RPM header blob is ~3 MB
+DINGTALK_GRAY_JSON = ("https://dtapp-pub.dingtalk.com/dingtalk-desktop/"
+                      "xc_dingtalk_update/linux_deb/Update/other/amd64/"
+                      "linux_dingtalk_update_package_gray.json")
+NETEASE_PAGE = "https://music.163.com/download"
 
 USER_AGENT = {"User-Agent": "qvoidz-rpm-packages-spec-bumper"}
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -232,10 +245,10 @@ def sync_wetypex(dry_run):
     return f"fcitx5-wetypex: {current_version}-{current_rel} -> {version}-{upstream_rel}"
 
 
-def rpm_header_sniff(url):
+def rpm_header_sniff(url, range_=None):
     """Fetch only the RPM header (HTTP Range request) and read name/version."""
     req = urllib.request.Request(
-        url, headers={**USER_AGENT, "Range": WECHAT_HEADER_RANGE})
+        url, headers={**USER_AGENT, "Range": range_ or WECHAT_HEADER_RANGE})
     with urllib.request.urlopen(req, timeout=120) as response:
         data = response.read()
     with tempfile.NamedTemporaryFile(suffix=".rpm", delete=False) as tmp:
@@ -438,6 +451,230 @@ def sync_waydroid(dry_run):
     return f"waydroid-script: {current} -> {version}"
 
 
+def sync_nerdfonts(dry_run):
+    """Nerd Fonts Cascadia Code: releases/latest tag v<version>."""
+    spec = read_spec("nerd-fonts-cascadia-code")
+    current = spec_field(spec, "Version")
+    release = latest_release(NERDFONTS_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected nerd-fonts tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"nerd-fonts-cascadia-code: up to date ({current})"
+    require_asset(release, "CascadiaCode.zip")
+    if not dry_run:
+        spec = re.sub(
+            r"(?m)^(Source0:\s*).*$",
+            rf"\g<1>https://github.com/{NERDFONTS_REPO}/releases/download/"
+            rf"v{version}/CascadiaCode.zip", spec, count=1)
+        write_spec("nerd-fonts-cascadia-code", bump_spec(
+            "nerd-fonts-cascadia-code", spec, version, "1%{?dist}",
+            f"Update to upstream Nerd Fonts {tag}"))
+    CHANGED.append("nerd-fonts-cascadia-code")
+    return f"nerd-fonts-cascadia-code: {current} -> {version}"
+
+
+def sync_lazyvim(dry_run):
+    """LazyVim: package the official starter template.
+
+    Version follows the LazyVim/LazyVim release tag (v<version>); the
+    starter template commit is pinned via %global starter_commit.
+    """
+    spec = read_spec("lazyvim")
+    current = spec_field(spec, "Version")
+    release = latest_release(LAZYVIM_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected LazyVim tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"lazyvim: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^%global starter_commit .*$",
+                      rf"%global starter_commit {LAZYVIM_STARTER_COMMIT}",
+                      spec, count=1)
+        write_spec("lazyvim", bump_spec(
+            "lazyvim", spec, version, "1%{?dist}",
+            f"Update to upstream LazyVim {tag} (starter template unchanged)"))
+    CHANGED.append("lazyvim")
+    return f"lazyvim: {current} -> {version}"
+
+
+def sync_zed(dry_run):
+    """Zed: GitHub releases (tag v<version>, zed-linux-x86_64.tar.gz)."""
+    spec = read_spec("zed")
+    current = spec_field(spec, "Version")
+    release = latest_release(ZED_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected zed tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"zed: up to date ({current})"
+    require_asset(release, "zed-linux-x86_64.tar.gz")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{ZED_REPO}/releases/download/"
+                      rf"v{version}/zed-linux-x86_64.tar.gz", spec, count=1)
+        write_spec("zed", bump_spec(
+            "zed", spec, version, "1%{?dist}",
+            f"Update to upstream Zed {tag}"))
+    CHANGED.append("zed")
+    return f"zed: {current} -> {version}"
+
+
+def sync_starship(dry_run):
+    """Starship: GitHub releases (tag v<version>, static musl tarball)."""
+    spec = read_spec("starship")
+    current = spec_field(spec, "Version")
+    release = latest_release(STARSHIP_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected starship tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"starship: up to date ({current})"
+    asset = f"starship-x86_64-unknown-linux-musl.tar.gz"
+    require_asset(release, asset)
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{STARSHIP_REPO}/releases/"
+                      rf"download/v{version}/{asset}", spec, count=1)
+        write_spec("starship", bump_spec(
+            "starship", spec, version, "1%{?dist}",
+            f"Update to upstream Starship {tag}"))
+    CHANGED.append("starship")
+    return f"starship: {current} -> {version}"
+
+
+def sync_qqmusic(dry_run):
+    """QQ Music: parse the official download page for the signed redirect.
+
+    The page embeds a file_redirect.fcg URL that mints a fresh signed
+    download link on every request; the version lives in the file=
+    parameter (qqmusic_<version>_amd64.deb).
+    """
+    spec = read_spec("qqmusic")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(QQMUSIC_PAGE, headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        page = response.read().decode("utf-8", "replace")
+    hits = re.findall(
+        r"https://c\.y\.qq\.com/cgi-bin/file_redirect\.fcg\?[^\"'>\s]*"
+        r"file=ecosfile_plink%2Fmusic_clntupate%2Flinux%2Fother%2F"
+        r"qqmusic_([0-9.]+)_amd64\.deb[^\"'>\s]*",
+        page.replace("&amp;", "&"))
+    if not hits:
+        raise RuntimeError("No QQ Music deb redirect URL on the download page")
+    version = hits[0]
+    if not re.fullmatch(r"[0-9][0-9.]*", version):
+        raise RuntimeError(f"Unexpected QQ Music version: {version}")
+    if rpm_vercmp(version, current) <= 0:
+        return f"qqmusic: up to date ({current})"
+    redirect = re.search(
+        r"https://c\.y\.qq\.com/cgi-bin/file_redirect\.fcg\?[^\"'>\s]*"
+        rf"file=ecosfile_plink%2Fmusic_clntupate%2Flinux%2Fother%2F"
+        rf"qqmusic_{re.escape(version)}_amd64\.deb[^\"'>\s]*",
+        page.replace("&amp;", "&")).group(0)
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{redirect}",
+                      spec, count=1)
+        write_spec("qqmusic", bump_spec(
+            "qqmusic", spec, version, "1%{?dist}",
+            f"Update to upstream QQ Music {version}"))
+    CHANGED.append("qqmusic")
+    return f"qqmusic: {current} -> {version}"
+
+
+def sync_wps(dry_run):
+    """WPS Office: version-independent rolling RPM; sniff the header."""
+    spec = read_spec("wps-office")
+    current = spec_field(spec, "Version")
+    name, version = rpm_header_sniff(WPS_ROLLING_URL, WPS_HEADER_RANGE)
+    if name != "wps-office":
+        raise RuntimeError(f"Unexpected rolling RPM name: {name}")
+    if rpm_vercmp(version, current) <= 0:
+        return f"wps-office: up to date ({current})"
+    if not dry_run:
+        write_spec("wps-office", bump_spec(
+            "wps-office", spec, version, "1%{?dist}",
+            f"Update to upstream WPS Office {version} (rolling RPM)"))
+    CHANGED.append("wps-office")
+    return f"wps-office: {current} -> {version}"
+
+
+def sync_dingtalk(dry_run):
+    """DingTalk: derive version from the update JSON's description.
+
+    The gray update JSON lags behind actual releases but is the only
+    machine-readable source. "版本：X-Release.Y" maps to the Release
+    deb URL com.alibabainc.dingtalk_X.Y_amd64.deb, which is verified
+    with a range request before bumping.
+    """
+    spec = read_spec("dingtalk")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(DINGTALK_GRAY_JSON, headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        info = json.load(response)
+    desc = info["install"]["description"]
+    match = re.search(r"版本：([0-9.]+)-Release\.([0-9]+)", desc)
+    if not match:
+        raise RuntimeError(f"Cannot parse DingTalk version from: {desc[:80]}")
+    version = f"{match.group(1)}.{match.group(2)}"
+    url = ("https://dtapp-pub.dingtalk.com/dingtalk-desktop/"
+           f"xc_dingtalk_update/linux_deb/Release/"
+           f"com.alibabainc.dingtalk_{version}_amd64.deb")
+    head = urllib.request.Request(url, headers={**USER_AGENT,
+                                   "Range": "bytes=0-1023"})
+    urllib.request.urlopen(head, timeout=60)  # 404 -> raise, no bump
+    if rpm_vercmp(version, current) <= 0:
+        return f"dingtalk: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{url}", spec, count=1)
+        write_spec("dingtalk", bump_spec(
+            "dingtalk", spec, version, "1%{?dist}",
+            f"Update to upstream DingTalk {version}"))
+    CHANGED.append("dingtalk")
+    return f"dingtalk: {current} -> {version}"
+
+
+def sync_netease(dry_run):
+    """NetEase Cloud Music: parse the official download page.
+
+    The client has been frozen at 1.2.1 since 2019, so this normally
+    reports up-to-date; the payload is downloaded by the package's
+    %post at install time (CDN rejects datacenter IPs).
+    """
+    spec = read_spec("netease-cloud-music")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(NETEASE_PAGE, headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        page = response.read().decode("utf-8", "replace")
+    hits = re.findall(
+        r"https?://d1\.music\.126\.net/dmusic/"
+        r"netease-cloud-music_([0-9.]+)_amd64_ubuntu_[0-9]+\.deb", page)
+    if not hits:
+        raise RuntimeError("No NetEase deb URL on the download page")
+    version = max(set(hits),
+                  key=lambda v: [int(x) for x in v.split(".")])
+    url = re.search(
+        rf"https?://d1\.music\.126\.net/dmusic/"
+        rf"netease-cloud-music_{re.escape(version)}_amd64_ubuntu_[0-9]+\.deb",
+        page).group(0)
+    url = url.replace("http://", "https://")
+    if rpm_vercmp(version, current) <= 0:
+        return f"netease-cloud-music: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^%global netease_deb_url .*$",
+                      rf"%global netease_deb_url {url}", spec, count=1)
+        write_spec("netease-cloud-music", bump_spec(
+            "netease-cloud-music", spec, version, "1%{?dist}",
+            f"Update to upstream NetEase Cloud Music {version}"))
+    CHANGED.append("netease-cloud-music")
+    return f"netease-cloud-music: {current} -> {version}"
+
+
 def selftest():
     cases = [
         ("0.9.4", "0.9.4", 0),
@@ -470,6 +707,14 @@ def main():
         sync_wemeet(dry_run),
         sync_iptvnator(dry_run),
         sync_waydroid(dry_run),
+        sync_nerdfonts(dry_run),
+        sync_lazyvim(dry_run),
+        sync_zed(dry_run),
+        sync_starship(dry_run),
+        sync_qqmusic(dry_run),
+        sync_wps(dry_run),
+        sync_dingtalk(dry_run),
+        sync_netease(dry_run),
     ]
     for message in messages:
         print(message)
