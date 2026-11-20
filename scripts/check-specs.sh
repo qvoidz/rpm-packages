@@ -27,21 +27,12 @@ for spec in "${specs[@]}"; do
         continue
     fi
 
-    if ! metadata=$(rpmspec -q --qf '%{NAME}\n%{VERSION}\n%{RELEASE}\n%{ARCH}\n' "$spec" 2>&1); then
-        echo "ERROR: RPM metadata query failed for $spec"
-        printf '%s\n' "$metadata"
-        failed=1
-        continue
-    fi
-
-    mapfile -t fields <<< "$metadata"
-    name=${fields[0]:-}
-    version=${fields[1]:-}
-    release=${fields[2]:-}
-    arch=${fields[3]:-}
-    if [[ -z "$name" || -z "$version" || -z "$release" ]]; then
-        echo "ERROR: Name/Version/Release is incomplete in $spec"
-        printf 'Metadata output: %q\n' "$metadata"
+    name=$(awk -F: '$1 == "Name" { sub(/^[[:space:]]*/, "", $2); print $2; exit }' "$spec")
+    version=$(awk -F: '$1 == "Version" { sub(/^[[:space:]]*/, "", $2); print $2; exit }' "$spec")
+    release=$(awk -F: '$1 == "Release" { sub(/^[[:space:]]*/, "", $2); print $2; exit }' "$spec")
+    arch=$(awk -F: '/^(ExclusiveArch|BuildArch):/ { sub(/^[[:space:]]*/, "", $2); print $2; exit }' "$spec")
+    if [[ -z "$name" || -z "$version" || -z "$release" || -z "$arch" ]]; then
+        echo "ERROR: Name/Version/Release/architecture declaration is incomplete in $spec"
         failed=1
         continue
     fi
