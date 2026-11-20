@@ -67,9 +67,9 @@ jobs:
           gh workflow run mirror.yml --ref main
 
           for i in $(seq 1 90); do
-            st=$(gh api "repos/$GH_REPO/actions/workflows/mirror.yml/runs?per_page=20" \
+            st=$(HEAD_SHA="$head" gh api "repos/$GH_REPO/actions/workflows/mirror.yml/runs?per_page=20" \
               --jq '.workflow_runs[] | select(.head_sha == env.HEAD_SHA) | .status + " " + (.conclusion // "")' \
-              --raw-field HEAD_SHA="$head" 2>/dev/null | head -1 || true)
+              | head -1 || true)
             echo "mirror on $head: ${st:-not started yet} ($i/90)"
             case "$st" in
               "completed success") break ;;
