@@ -169,17 +169,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           test -f mirror-debug.log || exit 0
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch -q origin mirror-debug || true
-          git checkout -q -B mirror-debug origin/mirror-debug 2>/dev/null \
-            || git checkout -q --orphan mirror-debug
-          git rm -rq . 2>/dev/null || true
-          cp mirror-debug.log .
-          git add -f mirror-debug.log
-          git commit -qm "mirror debug log (auto, $(date -u +%FT%TZ))"
-          git push -qf origin mirror-debug
-          echo "Debug log pushed to the mirror-debug branch"
+          # 1) Emit the tail as check-run annotations (anonymously readable
+          #    via the check-runs API, which is how this is diagnosed).
+          tail -40 mirror-debug.log | while IFS= read -r line; do
+            line=${line:0:800}
+            [ -n "$line" ] && echo "::error::LOG $line" || true
+          done
+          # 2) Best effort: also push the full transcript to a branch.
+          if git config user.name "github-actions[bot]" \
+             && git config user.email "41898282+github-actions[bot]@users.noreply.github.com" \
+             && (git fetch -q origin mirror-debug || true) \
+             && { git checkout -q -B mirror-debug 2>/dev/null \
+                  || git checkout -q --orphan mirror-debug; } \
+             && cp mirror-debug.log . \
+             && git add -f mirror-debug.log \
+             && git commit -qm "mirror debug log (auto, $(date -u +%FT%TZ))" \
+             && git push -qf origin mirror-debug; then
+            echo "Debug log pushed to the mirror-debug branch"
+          else
+            echo "::warning::Could not push the debug branch; annotations carry the tail"
+          fi
+          exit 0
 
   netease-cloud-music:
     name: Probe NetEase CDN from a datacenter
