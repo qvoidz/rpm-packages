@@ -48,11 +48,7 @@ linuxqq 是唯一的例外：没有 Source0，载荷在安装期下载（见上�
 2. 向 COPR 的**包 webhook** 发一个 POST（永久有效，无需任何 API token），COPR 随即用刚推送的 spec 重建变更的包；
 3. 用户随后 `sudo dnf upgrade` 即可升级。
 
-仓库另有一个独立的 [GitHub Pages DNF 镜像](.github/workflows/publish-dnf-repo.yml)（`scripts/sync-dnf-repo.py`）；只用 COPR 的话可以删掉。
-
 ## Fedora 安装（COPR）
-
-完成下文的一次性配置后：
 
 ```bash
 sudo dnf copr enable qvoidz/rpm-packages
@@ -60,17 +56,9 @@ sudo dnf install wechat workbuddy flclash fcitx5-wetypex flyline linuxqq wemeet 
 sudo dnf upgrade   # 之后就正常升级
 ```
 
-备选方式（不用 COPR 的静态镜像）：
-
-```bash
-sudo curl -fsSL https://raw.githubusercontent.com/qvoidz/rpm-packages/main/qvoidz.repo -o /etc/yum.repos.d/qvoidz.repo
-sudo dnf makecache
-sudo dnf install wechat workbuddy flclash fcitx5-wetypex
-```
-
 ## COPR 一次性配置（已完成）
 
-1. COPR 项目为 `qvoidz/rpm-packages`（目前只有 `fedora-45-x86_64`）。spec 里的 `ExclusiveArch: x86_64` 会让其他架构自动跳过。
+1. COPR 项目为 `qvoidz/rpm-packages`，已设为**永久项目**，只有 `fedora-45-x86_64` 一个 chroot。spec 里的 `ExclusiveArch: x86_64` 会让其他架构自动跳过。
 2. 每个包都以 SCM 源注册进 COPR 并开启了 **webhook rebuild**（改 spec 推送后自动重建）。
 3. 仓库 secret `COPR_WEBHOOK_BASE` 存了项目级 webhook 地址前缀（`https://copr.fedorainfracloud.org/webhooks/custom/<项目ID>/<uuid>`），工作流对变更的包 `POST <前缀>/<包名>/` 即可触发重建。
 
