@@ -33,6 +33,9 @@ mkdir -p %{buildroot}%{_datadir}/fonts/%{name}
 find . -name '*.ttf' -exec install -m 0644 '{}' \
     %{buildroot}%{_datadir}/fonts/%{name}/ ';'
 
+%check
+test -n "$(find %{buildroot}%{_datadir}/fonts/%{name} -type f -name '*.ttf' -print -quit)"
+
 %post
 if command -v fc-cache >/dev/null 2>&1; then
     fc-cache -f %{_datadir}/fonts/%{name} >/dev/null || :
