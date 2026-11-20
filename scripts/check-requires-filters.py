@@ -104,7 +104,7 @@ def main() -> int:
             failures.append(f"{spec_name}: file missing")
             continue
         text = path.read_text(encoding="utf-8")
-        match = re.search(r"^%global __requires_exclude\\s+(.+)$", text, re.MULTILINE)
+        match = re.search(r"^%global __requires_exclude\s+(.+)$", text, re.MULTILINE)
         if not match:
             failures.append(f"{spec_name}: missing __requires_exclude")
             continue
