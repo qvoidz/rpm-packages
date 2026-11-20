@@ -96,3 +96,21 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 COPR 通过 HTTPS 提供软件包，上游 RPM 的字节保持原样，不用项目密钥重新签名。GitHub release 资产会校验文件名与 API 提供的摘要；腾讯系包通过 HTTPS 下载并校验 RPM 元数据与 x86_64 架构；QQ/网易云的载荷由 CI 经官方渠道（签名接口 / 带 Referer 的官方 CDN）镜像到 GitHub Releases，字节不改动，构建期还校验载荷的 RPM/deb 元数据与期望版本一致。
 
 这是个人维护的非官方仓库，与上游项目无隶属关系。
+
+
+## 验证与安装测试
+
+每次修改 SPEC 或验证脚本时，GitHub Actions 会在 Fedora 45 环境中：
+
+- 用 `rpmspec` 解析全部 SPEC，并检查 Name/Version/Release、架构声明、重复 RPM 名称和必要段落；
+- 对 shell 脚本执行语法检查和 ShellCheck；
+- 运行 `rpmlint` 并保留诊断输出（当前作为报告项，不把所有 lint warning 当作构建失败）。
+
+在已启用本 COPR 的 Fedora 45 x86_64 测试机上，可以逐包验证真实安装与卸载：
+
+```bash
+sudo bash scripts/verify-packages.sh
+sudo bash scripts/verify-packages.sh FlClash linuxqq
+```
+
+安装测试会检查 RPM 数据库、关键文件/启动器、桌面入口和 `dnf check` 依赖状态。测试前已经安装的软件包会保留；测试新安装的软件包时，卸载阶段不会自动清理依赖，更不会运行 `dnf autoremove`。建议在一次性 Fedora 虚拟机中执行全量测试，因为部分桌面软件包下载量较大。
