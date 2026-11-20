@@ -10,6 +10,11 @@
 # package, whose source list would be empty without brp-strip).
 %global __os_install_post %{nil}
 %global debug_package %{nil}
+# rpm's dependency generator also scans the Android ARM ELF helpers under
+# bin/ and emits their bionic sonames (libc.so, libm.so, libdl.so,
+# liblog.so) as requirements; no Fedora package provides them (they only
+# exist inside the Android container), so filter them out.
+%global __requires_exclude ^lib(c|m|dl|log)\\.so(\\(\\)\\(64bit\\))?$
 
 # InquirerPy and pfzy are not packaged in Fedora; they are vendored from
 # pinned PyPI wheels into the package directory and put on PYTHONPATH by

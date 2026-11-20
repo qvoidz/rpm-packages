@@ -3,6 +3,13 @@
 # (brp-strip / brp-compress / check-rpaths), which rejects the upstream
 # binaries' "${ORIGIN}" runpaths and would modify the payload.
 %global __os_install_post %{nil}
+# The app bundle ships helper binaries for other architectures and OSes
+# (aarch64 / armhf / loongarch / riscv64, musl, FreeBSD). rpm's dependency
+# generator scans them too and emits soname requirements (e.g.
+# ld-linux-aarch64.so.1, libc.musl-*, libc.so.7) that no Fedora package
+# provides; the helpers only ever run inside the app's own sandbox, so
+# filter those false requirements out.
+%global __requires_exclude ^(ld-linux-(aarch64|armhf|loongarch|riscv64)|libc\\.(musl|so\\.7)|libcxxrt|libc\\+\\+abi|libc\\+\\+\\.so\\.9|libm\\.so\\.(5|10\\.1)|libm\\.so\\.6\\(GLIBC_2\\.17|libpthread\\.so\\.26|libgcc_s\\.so\\.1\\(GCC_3\\.5\\)|libstdc\\+\\+\\.so\\.6\\(CXXABI_ARM|libutil\\.so\\.1\\(GLIBC_2\\.17\\))
 # Source0 is Tencent's official WorkBuddy Linux RPM, discovered through the
 # update API https://copilot.tencent.com/v2/update?platform=workbuddy-linux-x64-rpm
 # The URL embeds a build hash and changes with every release, so

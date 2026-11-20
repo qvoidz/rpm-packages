@@ -3,6 +3,12 @@
 # brp-compress / check-rpaths) so the upstream binaries are repacked
 # byte-for-byte (their "${ORIGIN}" runpaths would be rejected otherwise).
 %global __os_install_post %{nil}
+# The upstream RPM bundles a few helper libraries built for other
+# architectures (aarch64) and with musl; rpm's dependency generator picks
+# up their sonames (ld-linux-aarch64.so.1, libc.musl-*, libm.so.6
+# GLIBC_2.17) as requirements, but no Fedora package provides them and the
+# helpers are never loaded on the host, so filter them out.
+%global __requires_exclude ^(ld-linux-aarch64|libc\\.musl|libm\\.so\\.6\\(GLIBC_2\\.17)
 
 Name:           iptvnator
 Version:        0.25.0
