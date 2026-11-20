@@ -183,22 +183,40 @@ def changelog_date():
     return time.strftime("%a %b %d %Y")
 
 
-def bump_spec(pkg, text, version, release, message):
+def bump_spec(pkg, text, version, release, message, changelog_release=None):
     """Rewrite Version/Release and prepend a changelog entry."""
     text = re.sub(r"(?m)^(Version:\s*)\S+", rf"\g<1>{version}", text, count=1)
     text = re.sub(r"(?m)^(Release:\s*)\S+", rf"\g<1>{release}", text, count=1)
+    if changelog_release is None:
+        changelog_release = release.split("%", 1)[0]
+    if not changelog_release:
+        raise ValueError("A concrete changelog Release value is required")
     entry = (f"* {changelog_date()} COPR Builder <copr@example.invalid> "
-             f"- {version}-{release.split('%')[0]}\n"
+             f"- {version}-{changelog_release}\n"
              f"- {message}\n")
     return text.replace("%changelog\n", "%changelog\n" + entry, 1)
+
+
+def waydroid_release_for_update(current_version, current_commit,
+                               version, commit, current_release):
+    """Calculate a new Release when the pinned Waydroid commit changes."""
+    order = rpm_vercmp(version, current_version)
+    if order < 0 or (order == 0 and commit == current_commit):
+        return None
+    if order > 0:
+        return "1%{?dist}"
+    match = re.match(r"^(\d+)", current_release)
+    if not match:
+        raise RuntimeError(
+            f"Cannot increment Waydroid RPM Release: {current_release}")
+    return f"{int(match.group(1)) + 1}%{{?dist}}"
 
 
 def require_asset(release, name):
     assets = [a["name"] for a in release.get("assets", [])]
     if name not in assets:
         raise RuntimeError(
-            f"{release.get('tag_name')}: expected asset {name}, "
-            f"found {assets}")
+            f"{release.get('tag_name')}: expected asset {name}, "            f"found {assets}")
 
 
 def sync_flclash(dry_run):
@@ -334,10 +352,14 @@ def sync_workbuddy(dry_run):
         raise RuntimeError(f"Unexpected WorkBuddy download URL: {url}")
     if rpm_vercmp(version, current) <= 0:
         return f"workbuddy: up to date ({current})"
-    # Sanity check the payload header before bumping.
-    name, _ = rpm_header_sniff(url)
+    # Sanity check both package identity and version before bumping.
+    name, payload_version = rpm_header_sniff(url)
     if name != "workbuddy":
         raise RuntimeError(f"Unexpected WorkBuddy RPM package name: {name}")
+    if rpm_vercmp(payload_version, version) != 0:
+        raise RuntimeError(
+            f"WorkBuddy API version {version} does not match RPM payload "
+            f"version {payload_version}")
     if not dry_run:
         spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{url}", spec, count=1)
         write_spec("workbuddy", bump_spec(
@@ -397,8 +419,7 @@ def sync_wemeet(dry_run):
     req = urllib.request.Request(WEMEET_API, headers=USER_AGENT)
     with urllib.request.urlopen(req, timeout=60) as response:
         info = json.load(response)["info-list"][0]
-    version, url = info["version"], info["url"]
-    if not re.fullmatch(r"[0-9][0-9.]*", version):
+    version, url = info["version"], info["url"]    if not re.fullmatch(r"[0-9][0-9.]*", version):
         raise RuntimeError(f"Unexpected Wemeet version: {version}")
     if (not url.startswith("https://updatecdn.meeting.qq.com/")
             or version not in url
@@ -436,13 +457,18 @@ def sync_iptvnator(dry_run):
 
 
 def sync_waydroid(dry_run):
-    """waydroid_script: no tags; track the master commit.
+    """waydroid_script: track the default-branch commit.
 
-    Version = commit date (YYYYMMDD); the commit hash is pinned via
-    %global commit in the spec, rewritten on every bump.
+    Version = commit date (YYYYMMDD). Multiple commits on the same date
+    increment RPM Release so later commits are not silently skipped.
     """
     spec = read_spec("waydroid-script")
     current = spec_field(spec, "Version")
+    current_commit_match = re.search(r"(?m)^%global commit\s+(\S+)", spec)
+    if not current_commit_match:
+        raise RuntimeError("%global commit not found in waydroid-script spec")
+    current_commit = current_commit_match.group(1)
+    current_release = spec_field(spec, "Release")
     info = github_json(f"https://api.github.com/repos/{WAYDROID_REPO}"
                        "/commits/HEAD")
     sha = info["sha"]
@@ -450,16 +476,18 @@ def sync_waydroid(dry_run):
     version = date[:10].replace("-", "")
     if not re.fullmatch(r"20[0-9]{6}", version):
         raise RuntimeError(f"Unexpected waydroid_script commit date: {date}")
-    if rpm_vercmp(version, current) <= 0:
+    release = waydroid_release_for_update(
+        current, current_commit, version, sha, current_release)
+    if release is None:
         return f"waydroid-script: up to date ({current}, {sha[:12]})"
     if not dry_run:
         spec = re.sub(r"(?m)^%global commit .*$",
                       rf"%global commit {sha}", spec, count=1)
         write_spec("waydroid-script", bump_spec(
-            "waydroid-script", spec, version, "1%{?dist}",
+            "waydroid-script", spec, version, release,
             f"Update to waydroid_script master {sha[:12]}"))
     CHANGED.append("waydroid-script")
-    return f"waydroid-script: {current} -> {version}"
+    return f"waydroid-script: {current} -> {version} ({sha[:12]})"
 
 
 def sync_nerdfonts(dry_run):
@@ -597,7 +625,6 @@ def sync_qqmusic(dry_run):
     CHANGED.append("qqmusic")
     return f"qqmusic: {current} -> {version}"
 
-
 def sync_wps(dry_run):
     """WPS Office: version-independent rolling RPM; sniff the header."""
     spec = read_spec("wps-office")
@@ -700,6 +727,20 @@ def selftest():
     for a, b, expected in cases:
         result = rpm_vercmp(a, b)
         assert result == expected, f"rpm_vercmp({a}, {b}) = {result}, want {expected}"
+
+    assert waydroid_release_for_update(
+        "20261121", "a" * 40, "20261121", "a" * 40, "1%{?dist}") is None
+    assert waydroid_release_for_update(
+        "20261121", "a" * 40, "20261121", "b" * 40, "1%{?dist}") == "2%{?dist}"
+    assert waydroid_release_for_update(
+        "20261120", "a" * 40, "20261121", "b" * 40, "4%{?dist}") == "1%{?dist}"
+    assert waydroid_release_for_update(
+        "20261122", "a" * 40, "20261121", "b" * 40, "1%{?dist}") is None
+
+    changelog = bump_spec(
+        "test", "%changelog\\n", "1.2.3", "%{upstream_rel}%{?dist}",
+        "test macro-based Release", changelog_release="9")
+    assert " - 1.2.3-9\\n" in changelog, changelog
     print("selftest OK")
 
 
