@@ -39,31 +39,21 @@ jobs:
           git commit -m "Auto-update specs: ${{ steps.bump.outputs.changed }}"
           git push
 
-      - name: Trigger COPR builds
+      - name: Trigger COPR builds via package webhooks
         if: steps.bump.outputs.changed != ''
         env:
-          COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
-          COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
-          COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
+          COPR_WEBHOOK_BASE: ${{ secrets.COPR_WEBHOOK_BASE }}
         run: |
-          if [ -z "$COPR_LOGIN" ] || [ -z "$COPR_TOKEN" ]; then
-            echo "::warning::COPR_LOGIN / COPR_TOKEN secrets are not configured; spec bumps were pushed but no COPR build was triggered."
+          # COPR package webhooks never expire, so no COPR API token is
+          # needed here: each SCM package in qvoidz/rpm-packages has
+          # "webhook rebuild" enabled and rebuilds its spec from the
+          # just-pushed commit when we POST to its webhook URL.
+          if [ -z "$COPR_WEBHOOK_BASE" ]; then
+            echo "::warning::COPR_WEBHOOK_BASE secret is not configured; spec bumps were pushed but no COPR build was triggered."
             exit 0
           fi
-          python3 -m pip install --quiet --user --break-system-packages copr
-          export PATH="$HOME/.local/bin:$PATH"
-          mkdir -p ~/.config
-          {
-            echo "[copr-cli]"
-            echo "copr_url = https://copr.fedorainfracloud.org"
-            echo "login = $COPR_LOGIN"
-            echo "token = $COPR_TOKEN"
-            echo "username = ${COPR_USERNAME:-qvoidz}"
-          } > ~/.config/copr
-          chmod 600 ~/.config/copr
           for pkg in ${{ steps.bump.outputs.changed }}; do
-            copr-cli buildscm --nowait \
-              --clone-url "https://github.com/${{ github.repository }}" \
-              --spec "$pkg/$pkg.spec" \
-              "${COPR_USERNAME:-qvoidz}/rpm-packages"
+            echo "Triggering COPR rebuild for $pkg ..."
+            curl -fsS -X POST "$COPR_WEBHOOK_BASE/$pkg/" \
+              || echo "::warning::COPR webhook for $pkg failed"
           done
