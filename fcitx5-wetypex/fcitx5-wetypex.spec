@@ -6,7 +6,7 @@
 # exposing them as soname provides (would shadow the real Fedora packages).
 %global __provides_exclude ^.*$
 # libkqueue is bundled in the upstream RPM; it is not a Fedora runtime dependency.
-%global __requires_exclude ^libkqueue\\.so\\.0(\\(|$)
+%global __requires_exclude ^libkqueue\.so\.0(\(|$)
 ExclusiveArch:  x86_64
 
 Name:           fcitx5-wetypex
