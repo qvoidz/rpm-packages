@@ -9,7 +9,7 @@
 # ld-linux-aarch64.so.1, libc.musl-*, libc.so.7) that no Fedora package
 # provides; the helpers only ever run inside the app's own sandbox, so
 # filter those false requirements out.
-%global __requires_exclude ^(ld-linux-(aarch64|armhf|loongarch|riscv64)|libc\\.(musl|so\\.7)|libcxxrt|libc\\+\\+abi|libc\\+\\+\\.so\\.9|libm\\.so\\.(5|10\\.1)|libm\\.so\\.6\\(GLIBC_2\\.17|libpthread\\.so\\.(26\\.1|0\\(GLIBC_2\\.17\\))|libgcc_s\\.so\\.1\\(GCC_3\\.5\\)|libstdc\\+\\+\\.so\\.6\\(CXXABI_ARM|libutil\\.so\\.1\\(GLIBC_2\\.17\\)|libffmpeg\\.so)
+%global __requires_exclude ^(ld-linux-(aarch64|armhf|loongarch|riscv64)|libc\.(musl|so\.7)|libcxxrt|libc\+\+abi|libc\+\+\.so\.9|libm\.so\.(5|10\.1)|libm\.so\.6\(GLIBC_2\.17|libpthread\.so\.(26\.1|0\(GLIBC_2\.17\))|libgcc_s\.so\.1\(GCC_3\.5\)|libstdc\+\+\.so\.6\(CXXABI_ARM|libutil\.so\.1\(GLIBC_2\.17|libffmpeg\.so)
 # The payload also bundles x86-64 copies of common system libraries. rpm's
 # automatic generator turns them into soname Provides, shadowing the real
 # Fedora providers and making dnf pull this package to satisfy unrelated
