@@ -58,6 +58,11 @@ for spec in "${specs[@]}"; do
         failed=1
     fi
 
+    if ! grep -qE '^(ExclusiveArch|BuildArch):' "$spec"; then
+        echo "ERROR: $spec must declare ExclusiveArch or BuildArch"
+        failed=1
+    fi
+
     if grep -qiE '^Source[0-9]*:.*\.zip([[:space:]]|$)' "$spec"; then
         if ! grep -q 'unzip' "$spec" || ! grep -qE '^%setup.*-T' "$spec"; then
             echo "ERROR: ZIP source in $spec must use %setup -T and unzip"
