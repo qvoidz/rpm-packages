@@ -74,7 +74,8 @@ jobs:
           missing=$(echo "$missing" | xargs)
           if [ -z "$missing" ]; then
             echo "All payload mirror assets already exist."
-            echo "mirror_rebuilds=" >> "$GITHUB_OUTPUT"
+            echo "mirror_ready=" >> "$GITHUB_OUTPUT"
+            echo "mirror_missing=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -94,20 +95,20 @@ jobs:
             case "$st" in
               "completed success") completed=true; break ;;
               "completed failure"|"completed cancelled"|"completed timed_out")
-                echo "::error::Mirror workflow ended with: $st"
-                exit 1
+                echo "::warning::Mirror workflow ended with: $st"
+                break
                 ;;
             esac
             sleep 20
           done
           if [ "$completed" != true ]; then
-            echo "::error::Mirror did not complete within 30 minutes"
-            exit 1
+            echo "::warning::Mirror workflow did not complete successfully within 30 minutes; checking any assets that may still have been uploaded."
           fi
 
-          # A successful mirror workflow may skip NetEase if its CDN blocks
-          # datacenter downloads. Verify the exact expected assets, and leave
-          # the package out of COPR until a later daily retry succeeds.
+          # Mirror jobs are independent. Keep packages whose exact assets are
+          # ready moving through COPR even if the other vendor CDN is down.
+          ready=""
+          still_missing=""
           for pkg in $missing; do
             case "$pkg" in
               linuxqq)
@@ -121,28 +122,49 @@ jobs:
             esac
             tag="$pkg-$version"
             asset=$(basename "$url")
-            if ! gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$asset"; then
-              echo "::error::Required mirror asset is still missing: release=$tag asset=$asset"
-              exit 1
+            if gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset"; then
+              echo "Verified mirror asset: $tag/$asset"
+              ready="$ready $pkg"
+            else
+              echo "::warning::Required mirror asset is still missing: release=$tag asset=$asset"
+              still_missing="$still_missing $pkg"
             fi
-            echo "Verified mirror asset: $tag/$asset"
           done
 
-          echo "mirror_rebuilds=$missing" >> "$GITHUB_OUTPUT"
+          ready=$(echo "$ready" | xargs)
+          still_missing=$(echo "$still_missing" | xargs)
+          echo "mirror_ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "mirror_missing=$still_missing" >> "$GITHUB_OUTPUT"
 
       - name: Trigger COPR builds via package webhooks
-        if: steps.bump.outputs.changed != '' || steps.mirror.outputs.mirror_rebuilds != ''
+        if: steps.bump.outputs.changed != '' || steps.mirror.outputs.mirror_ready != ''
         env:
           COPR_WEBHOOK_BASE: ${{ secrets.COPR_WEBHOOK_BASE }}
+          MIRROR_MISSING: ${{ steps.mirror.outputs.mirror_missing }}
         run: |
           set -euo pipefail
+          packages=""
+          for pkg in ${{ steps.bump.outputs.changed }} ${{ steps.mirror.outputs.mirror_ready }}; do
+            [ -n "$pkg" ] || continue
+            case " $MIRROR_MISSING " in
+              *" $pkg "*) echo "$pkg: waiting for its missing mirror asset"; continue ;;
+            esac
+            case " $packages " in
+              *" $pkg "*) continue ;;
+            esac
+            packages="$packages $pkg"
+          done
+          packages=$(echo "$packages" | xargs)
+          if [ -z "$packages" ]; then
+            echo "No packages are ready for COPR; mirror retry will run on the next schedule."
+            exit 0
+          fi
           if [ -z "$COPR_WEBHOOK_BASE" ]; then
             echo "::error::COPR_WEBHOOK_BASE secret is not configured; specs were pushed but no COPR build was triggered."
             exit 1
           fi
           base="${COPR_WEBHOOK_BASE%/}"
-          for pkg in ${{ steps.bump.outputs.changed }} ${{ steps.mirror.outputs.mirror_rebuilds }}; do
-            [ -n "$pkg" ] || continue
+          for pkg in $packages; do
             echo "Triggering COPR rebuild for $pkg ..."
             curl --retry 3 --retry-all-errors --retry-delay 5 -fsS -X POST "$base/$pkg/"
           done
@@ -151,11 +173,15 @@ jobs:
         if: success()
         env:
           COPR_WEBHOOK_BASE: ${{ secrets.COPR_WEBHOOK_BASE }}
+          MIRROR_MISSING: ${{ steps.mirror.outputs.mirror_missing }}
         run: |
           set -euo pipefail
           # Do not re-trigger builds that are already queued/running. Only
           # retry terminal failures (or a package with no build yet).
           for pkg in linuxqq netease-cloud-music; do
+            case " $MIRROR_MISSING " in
+              *" $pkg "*) echo "$pkg: waiting for its mirror asset"; continue ;;
+            esac
             state=$(curl -fsS \
               "https://copr.fedorainfracloud.org/api_3/build/list?ownername=qvoidz&projectname=rpm-packages&packagename=$pkg&limit=1" \
               | jq -r '.items[0].state // "missing"')
