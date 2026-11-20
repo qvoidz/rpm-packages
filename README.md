@@ -15,6 +15,16 @@
 | [腾讯会议](https://meeting.tencent.com/) | 官方 x86_64 .deb 重打包为 RPM |
 | [iptvnator](https://github.com/4gray/iptvnator) | 上游 GitHub release 提供的 Linux x86_64 RPM |
 | [waydroid-script](https://github.com/casualsnek/waydroid_script) | Waydroid 装 GApps/Magisk/libhoudini 的 Python 工具 |
+| [Nerd Fonts Cascadia Code](https://github.com/ryanoasis/nerd-fonts) | 上游 `CascadiaCode.zip` 字体，原样安装 |
+| [LazyVim](https://www.lazyvim.org/) | 官方 starter 模板 + `lazyvim` 引导命令，版本跟踪 LazyVim release |
+| [Zed](https://zed.dev/) | 官方 `zed.app` bundle 原样重打包 |
+| [Starship](https://starship.rs/) | 官方静态 musl 二进制 |
+| [QQ音乐](https://y.qq.com/) | 官方 x86_64 .deb 重打包为 RPM（签名跳转链） |
+| [WPS Office](https://linux.wps.cn/) | 官方滚动 RPM 原样重打包，版本从 RPM 头部嗅探 |
+| [钉钉](https://www.dingtalk.com/) | 官方 x86_64 .deb 重打包为 RPM |
+| [网易云音乐](https://music.163.com/) | 安装器壳包：安装期下载官方 .deb 并解包 |
+| edge-repo | 装上后即可 `dnf install microsoft-edge-stable` |
+| vscode-repo | 装上后即可 `dnf install code` |
 
 WeTypeX 的专有运行时不在其上游 RPM 内，需按上游说明单独安装并接受许可。
 
@@ -22,7 +32,9 @@ WeTypeX 的专有运行时不在其上游 RPM 内，需按上游说明单独安�
 
 ```bash
 sudo dnf copr enable qvoidz/rpm-packages
-sudo dnf install wechat workbuddy flclash fcitx5-wetypex flyline linuxqq wemeet iptvnator waydroid-script
+sudo dnf install wechat workbuddy flclash fcitx5-wetypex flyline linuxqq wemeet iptvnator waydroid-script \
+    nerd-fonts-cascadia-code lazyvim zed starship qqmusic wps-office dingtalk netease-cloud-music \
+    edge-repo vscode-repo
 sudo dnf upgrade   # 日常升级
 ```
 
@@ -49,6 +61,12 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 | linuxqq | 腾讯官方下载配置 `pcConfig.json`，从文件名解析版本 |
 | wemeet | 腾讯会议下载接口 `query-download-info` |
 | waydroid-script | 无 git tag，取默认分支最新 commit，版本号 = 提交日期（YYYYMMDD） |
+| nerd-fonts-cascadia-code / zed / starship | GitHub API `releases/latest` |
+| lazyvim | LazyVim/LazyVim `releases/latest`（starter 模板 commit 固定） |
+| qqmusic | 官方下载页内嵌的签名跳转链（`file_redirect.fcg`），版本从文件名解析 |
+| wps-office | 官方滚动 RPM 永不变 URL，HTTP Range 只取 RPM 头部（约 4 MB）嗅探版本 |
+| dingtalk | 官方更新 JSON 的版本描述（灰度通道，可能略滞后于实际最新版） |
+| netease-cloud-music | 官方下载页解析 .deb 文件名（上游 2019 年起冻结在 1.2.1） |
 
 发现新版本后，工作流自动完成：
 
