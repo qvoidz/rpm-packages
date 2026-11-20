@@ -6,6 +6,8 @@
 # soname requires. Suppress all auto-generated provides; the package's own
 # name provides are intrinsic and unaffected.
 %global __provides_exclude ^.*$
+# libffmpeg is shipped inside the upstream application payload.
+%global __requires_exclude ^libffmpeg\\.so(\\(|$)
 # QQ Music does not publish RPMs; this package repacks the official
 # x86_64 .deb. Tencent signs download URLs, so Source0 points at the
 # official download page's file_redirect.fcg CGI, which generates a
@@ -14,7 +16,7 @@
 # rewrites both Version and Source0 automatically.
 Name:           qqmusic
 Version:        1.1.8
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Tencent QQ Music desktop client for Linux
 License:        LicenseRef-Tencent-QQMusic-Software-License
 URL:            https://y.qq.com/
@@ -74,6 +76,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.1.8-3
+- Filter the bundled libffmpeg soname from automatic runtime requirements
+
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - fix
 - Filter auto-generated provides of bundled system libraries
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 1.1.8-1
