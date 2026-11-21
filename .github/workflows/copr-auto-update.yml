@@ -63,14 +63,6 @@ jobs:
             missing="$missing linuxqq"
           fi
 
-          version=$(sed -n 's/^Version:[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec | head -1)
-          url=$(sed -n 's/^%global netease_deb_url[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec)
-          tag="netease-cloud-music-$version"
-          asset=$(basename "$url")
-          if ! gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset"; then
-            missing="$missing netease-cloud-music"
-          fi
-
           missing=$(echo "$missing" | xargs)
           if [ -z "$missing" ]; then
             echo "All payload mirror assets already exist."
@@ -114,10 +106,6 @@ jobs:
               linuxqq)
                 version=$(sed -n 's/^Version:[[:space:]]*//p' linuxqq/linuxqq.spec | head -1)
                 url=$(sed -n 's/^%global qq_rpm_url[[:space:]]*//p' linuxqq/linuxqq.spec)
-                ;;
-              netease-cloud-music)
-                version=$(sed -n 's/^Version:[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec | head -1)
-                url=$(sed -n 's/^%global netease_deb_url[[:space:]]*//p' netease-cloud-music/netease-cloud-music.spec)
                 ;;
             esac
             tag="$pkg-$version"
@@ -178,7 +166,7 @@ jobs:
           set -euo pipefail
           # Do not re-trigger builds that are already queued/running. Only
           # retry terminal failures (or a package with no build yet).
-          for pkg in linuxqq netease-cloud-music; do
+          for pkg in linuxqq; do
             case " $MIRROR_MISSING " in
               *" $pkg "*) echo "$pkg: waiting for its mirror asset"; continue ;;
             esac

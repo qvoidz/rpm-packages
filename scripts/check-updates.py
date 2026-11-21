@@ -92,7 +92,6 @@ WPS_HEADER_RANGE = "bytes=0-4194303"  # WPS RPM header blob is ~3 MB
 DINGTALK_GRAY_JSON = ("https://dtapp-pub.dingtalk.com/dingtalk-desktop/"
                       "xc_dingtalk_update/linux_deb/Update/other/amd64/"
                       "linux_dingtalk_update_package_gray.json")
-NETEASE_PAGE = "https://music.163.com/download"
 TELEGRAM_REPO = "telegramdesktop/tdesktop"
 ZCODE_MANIFEST_URL = ("https://zcode.z.ai/api/v1/releases/electron/manifest"
                       "?platform=linux-x64&channel=stable")
@@ -686,42 +685,6 @@ def sync_dingtalk(dry_run):
     return f"dingtalk: {current} -> {version}"
 
 
-def sync_netease(dry_run):
-    """NetEase Cloud Music: parse the official download page.
-
-    The client has been frozen at 1.2.1 since 2019, so this normally
-    reports up-to-date; the mirror workflow fetches the official .deb
-    and publishes it as a GitHub Release asset for the COPR build.
-    """
-    spec = read_spec("netease-cloud-music")
-    current = spec_field(spec, "Version")
-    req = urllib.request.Request(NETEASE_PAGE, headers=USER_AGENT)
-    with urllib.request.urlopen(req, timeout=60) as response:
-        page = response.read().decode("utf-8", "replace")
-    hits = re.findall(
-        r"https?://d1\.music\.126\.net/dmusic/"
-        r"netease-cloud-music_([0-9.]+)_amd64_ubuntu_[0-9]+\.deb", page)
-    if not hits:
-        raise RuntimeError("No NetEase deb URL on the download page")
-    version = max(set(hits),
-                  key=lambda v: [int(x) for x in v.split(".")])
-    url = re.search(
-        rf"https?://d1\.music\.126\.net/dmusic/"
-        rf"netease-cloud-music_{re.escape(version)}_amd64_ubuntu_[0-9]+\.deb",
-        page).group(0)
-    url = url.replace("http://", "https://")
-    if rpm_vercmp(version, current) <= 0:
-        return f"netease-cloud-music: up to date ({current})"
-    if not dry_run:
-        spec = re.sub(r"(?m)^%global netease_deb_url .*$",
-                      rf"%global netease_deb_url {url}", spec, count=1)
-        write_spec("netease-cloud-music", bump_spec(
-            "netease-cloud-music", spec, version, "1%{?dist}",
-            f"Update to upstream NetEase Cloud Music {version}"))
-    CHANGED.append("netease-cloud-music")
-    return f"netease-cloud-music: {current} -> {version}"
-
-
 def sync_telegram(dry_run):
     """Telegram Desktop: GitHub releases of telegramdesktop/tdesktop
     (tag v<version>, Linux portable asset td-setup-linux-x64-<version>.tar.xz).
@@ -833,7 +796,6 @@ def main():
         ("qqmusic", sync_qqmusic),
         ("wps-office", sync_wps),
         ("dingtalk", sync_dingtalk),
-        ("netease-cloud-music", sync_netease),
         ("telegram-desktop", sync_telegram),
         ("zcode", sync_zcode),
     ]

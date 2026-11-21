@@ -17,7 +17,6 @@ on:
     paths:
       - ".github/workflows/mirror.yml"
       - "linuxqq/**"
-      - "netease-cloud-music/**"
   schedule:
     - cron: "10 21 * * *" # 21:10 UTC, 13 min before copr-auto-update
 
@@ -192,44 +191,3 @@ jobs:
           fi
           exit 0
 
-  netease-cloud-music:
-    name: Probe NetEase CDN from a datacenter
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Probe download with Referer
-        id: probe
-        run: |
-          url=$(sed -n 's/^%global netease_deb_url //p' \
-            netease-cloud-music/netease-cloud-music.spec)
-          version=$(sed -n 's/^Version: *//p' \
-            netease-cloud-music/netease-cloud-music.spec | head -1)
-          asset=$(basename "$url")
-          echo "asset=$asset" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if curl -fsSL --retry 3 \
-              -e 'https://music.163.com/download' \
-              -A 'Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0' \
-              -o "$asset" "$url"; then
-            size=$(stat -c%s "$asset")
-            echo "downloaded $asset: $size bytes"
-            [ "$size" -gt 50000000 ]
-            echo "reachable=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::NetEase CDN blocks datacenter IPs even with Referer; netease-cloud-music stays an install-time shell package."
-            echo "reachable=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Publish release asset
-        if: steps.probe.outputs.reachable == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: netease-cloud-music-${{ steps.probe.outputs.version }}
-          ASSET: ${{ steps.probe.outputs.asset }}
-        run: |
-          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" \
-            --notes "Upstream NetEase Cloud Music .deb, mirrored for COPR builds." \
-            || true
-          gh release upload "$TAG" "$ASSET" --clobber
-          echo "Published $ASSET on release $TAG"

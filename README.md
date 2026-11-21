@@ -36,7 +36,7 @@ WeTypeX 的专有运行时不在其上游 RPM 内，需按上游说明单独安�
 ```bash
 sudo dnf copr enable qvoidz/rpm-packages
 sudo dnf install wechat workbuddy flclash fcitx5-wetypex flyline linuxqq wemeet iptvnator waydroid-script \
-    nerd-fonts-cascadia-code lazyvim zed starship qqmusic wps-office dingtalk netease-cloud-music \
+    nerd-fonts-cascadia-code lazyvim zed starship qqmusic wps-office dingtalk \
     telegram-desktop zcode edge-repo vscode-repo nvim-vim-shim
 sudo dnf upgrade   # 日常升级
 ```
@@ -56,8 +56,8 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 因此 [`mirror.yml`](.github/workflows/mirror.yml) 在 GitHub Actions runner 上：
 
 1. 从 spec 读取裸链（镜像 spec 需要的版本，不追官方配置的“当前版”——腾讯回滚过版本，配置会摆动）；
-2. QQ：调腾讯公开签名接口 `GetSign`（nixpkgs 同方案）换临时链下载；网易云：带 Referer 直接下载；
-3. 校验后发布为 GitHub Release 资产（tag `linuxqq-<版本>` / `netease-cloud-music-<版本>`），spec 的 `Source0` 指向它，COPR 构建期正常拉取；
+2. QQ：调腾讯公开签名接口 `GetSign`（nixpkgs 同方案）换临时链下载；
+3. 校验后发布为 GitHub Release 资产（tag `linuxqq-<版本>`），spec 的 `Source0` 指向它，COPR 构建期正常拉取；
 4. 下载用 16 分片并行 + 断点续传（qqdl 对海外单连接限速严重，单流 45 分钟都拖不完）。
 
 `GITHUB_TOKEN` 推送的提交不会触发其他工作流的普通 `push` 事件，因此 `copr-auto-update` 会显式 dispatch `mirror.yml`，并校验对应 Release 资产确实存在后才触发 COPR。每天也会检查已配置版本的镜像资产；如果 CDN 暂时不可用，后续定时运行会重试，不会把缺失的载荷提交给 COPR 构建。
@@ -78,7 +78,6 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 | qqmusic | 官方下载页内嵌的签名跳转链（`file_redirect.fcg`），版本从文件名解析 |
 | wps-office | 官方滚动 RPM 永不变 URL，HTTP Range 只取 RPM 头部（约 4 MB）嗅探版本 |
 | dingtalk | 官方更新 JSON 的版本描述（灰度通道，可能略滞后于实际最新版） |
-| netease-cloud-music | 官方下载页解析 .deb 文件名（上游 2019 年起冻结在 1.2.1） |
 | telegram-desktop | Telegram 官方 GitHub `releases/latest`（tag `v<版本>`，资产 `td-setup-linux-x64-<版本>.tar.xz`） |
 | zcode | 智谱 ZCode 更新清单 API（`api/v1/releases/electron/manifest?platform=linux-x64`，YAML 中的版本号 + RPM CDN 地址） |
 
