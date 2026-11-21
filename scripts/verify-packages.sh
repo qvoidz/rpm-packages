@@ -12,7 +12,7 @@ set -uo pipefail
 PACKAGES=(
   FlClash fcitx5-wetypex flyline wechat workbuddy linuxqq wemeet iptvnator
   waydroid-script nerd-fonts-cascadia-code lazyvim zed starship qqmusic
-  wps-office dingtalk netease-cloud-music edge-repo vscode-repo
+  wps-office dingtalk netease-cloud-music edge-repo vscode-repo zcode
 )
 
 is_known_package() {
@@ -83,6 +83,9 @@ check_installed() {
         vscode-repo)
             [[ -s /etc/yum.repos.d/vscode.repo ]] &&
                 grep -q '^gpgcheck=1$' /etc/yum.repos.d/vscode.repo
+            ;;
+        zcode)
+            [[ -x /opt/ZCode/zcode ]]
             ;;
         *)
             echo "No installation assertion defined for $pkg" >&2
