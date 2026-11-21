@@ -13,6 +13,7 @@ PACKAGES=(
   FlClash fcitx5-wetypex flyline wechat workbuddy linuxqq wemeet iptvnator
   waydroid-script nerd-fonts-cascadia-code lazyvim zed starship qqmusic
   wps-office dingtalk netease-cloud-music edge-repo vscode-repo zcode
+  nvim-vim-shim
 )
 
 is_known_package() {
@@ -86,6 +87,10 @@ check_installed() {
             ;;
         zcode)
             [[ -x /opt/ZCode/zcode ]]
+            ;;
+        nvim-vim-shim)
+            [[ -x /usr/bin/vim && -x /usr/bin/vimdiff ]] &&
+                /usr/bin/vim --version 2>/dev/null | grep -q '^NVIM v'
             ;;
         *)
             echo "No installation assertion defined for $pkg" >&2

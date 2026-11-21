@@ -17,6 +17,7 @@
 | [waydroid-script](https://github.com/casualsnek/waydroid_script) | Waydroid 装 GApps/Magisk/libhoudini 的 Python 工具 |
 | [Nerd Fonts Cascadia Code](https://github.com/ryanoasis/nerd-fonts) | 上游 `CascadiaCode.zip` 字体，原样安装 |
 | [LazyVim](https://www.lazyvim.org/) | 官方 starter 模板 + `lazyvim` 引导命令，版本跟踪 LazyVim release |
+| [nvim-vim-shim](https://neovim.io/) | `vim`/`vimdiff` 命令直接启动 Neovim 的两个 shell shim，与 vim-enhanced 互斥 |
 | [Zed](https://zed.dev/) | 官方 `zed.app` bundle 原样重打包 |
 | [Starship](https://starship.rs/) | 官方静态 musl 二进制 |
 | [QQ音乐](https://y.qq.com/) | 官方 x86_64 .deb 重打包为 RPM（签名跳转链） |
@@ -36,7 +37,7 @@ WeTypeX 的专有运行时不在其上游 RPM 内，需按上游说明单独安�
 sudo dnf copr enable qvoidz/rpm-packages
 sudo dnf install wechat workbuddy flclash fcitx5-wetypex flyline linuxqq wemeet iptvnator waydroid-script \
     nerd-fonts-cascadia-code lazyvim zed starship qqmusic wps-office dingtalk netease-cloud-music \
-    telegram-desktop zcode edge-repo vscode-repo
+    telegram-desktop zcode edge-repo vscode-repo nvim-vim-shim
 sudo dnf upgrade   # 日常升级
 ```
 
