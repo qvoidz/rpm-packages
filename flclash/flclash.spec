@@ -21,7 +21,7 @@ ExclusiveArch:  x86_64
 
 Name:           FlClash
 Version:        0.9.4
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        A modern proxy client based on Clash
 License:        GPL-3.0-or-later
 URL:            https://github.com/chen08209/FlClash
@@ -98,7 +98,13 @@ find %{buildroot} -type l | while read -r link; do
             ;;
     esac
 done
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' | sort > %{_builddir}/%{name}-filelist
+{
+  find %{buildroot} -mindepth 1 -type d \
+    ! -path '%{buildroot}/usr/bin' ! -path '%{buildroot}/usr/sbin' \
+    ! -path '%{buildroot}/usr/lib' ! -path '%{buildroot}/usr/lib64' \
+    -printf '/%%P\n' | awk '{ if ($0 ~ /[[:space:]]/) print "%%dir \"" $0 "\""; else print "%%dir " $0 }'
+  find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n'
+} | sort > %{_builddir}/%{name}-filelist
 
 %post
 update-desktop-database %{_datadir}/applications &> /dev/null || :
@@ -113,6 +119,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 0.9.4-9
+- Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 0.9.4-8
 - Rewrite the payload's one absolute symlink (/usr/bin/FlClash) to a relative
   link, silencing rpmbuild's "absolute symlink" warning; generic loop covers

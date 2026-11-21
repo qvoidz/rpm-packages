@@ -17,7 +17,7 @@
 # for the upstream version and rewrites Version when it advances.
 Name:           wps-office
 Version:        12.1.2.29182.AK.preread.sw
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        WPS Office - Kingsoft office suite for Linux
 License:        LicenseRef-Kingsoft-WPS-Office-License
 URL:            https://linux.wps.cn/
@@ -157,9 +157,14 @@ cd %{buildroot}
 rpm2cpio %{SOURCE0} | cpio -idm --quiet --no-absolute-filenames
 # Wrap entries containing spaces in double quotes (supported by rpm >= 4.20
 # file lists); WPS ships template documents like "labor contract.dotm".
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
-    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }' \
-    | sort > %{_builddir}/%{name}-filelist
+{
+  find %{buildroot} -mindepth 1 -type d \
+    ! -path '%{buildroot}/usr/bin' ! -path '%{buildroot}/usr/sbin' \
+    ! -path '%{buildroot}/usr/lib' ! -path '%{buildroot}/usr/lib64' \
+    -printf '/%%P\n' | awk '{ if ($0 ~ /[[:space:]]/) print "%%dir \"" $0 "\""; else print "%%dir " $0 }'
+  find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
+    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }'
+} | sort > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -174,6 +179,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 12.1.2.29182.AK.preread.sw-7
+- Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 12.1.2.29182.AK.preread.sw-5
 - Filter all bundled sonames that no Fedora package provides; keep every
   provider-backed host dependency (regression-tested against Fedora 45 repodata)

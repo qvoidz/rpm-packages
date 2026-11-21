@@ -20,7 +20,7 @@
 # verifies the constructed URL before rewriting Version and Source0.
 Name:           dingtalk
 Version:        8.3.1.261008001
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        DingTalk (钉钉) desktop client for Linux
 License:        LicenseRef-Alibaba-DingTalk-Software-License
 URL:            https://www.dingtalk.com/
@@ -199,9 +199,14 @@ tar xJf data.tar.xz
 rm -f data.tar.xz
 chmod 0755 %{buildroot}/opt/dingtalk/com.alibabainc.dingtalk 2>/dev/null || :
 chmod 0755 %{buildroot}/opt/dingtalk/dingtalk 2>/dev/null || :
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
-    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }' \
-    | sort > %{_builddir}/%{name}-filelist
+{
+  find %{buildroot} -mindepth 1 -type d \
+    ! -path '%{buildroot}/usr/bin' ! -path '%{buildroot}/usr/sbin' \
+    ! -path '%{buildroot}/usr/lib' ! -path '%{buildroot}/usr/lib64' \
+    -printf '/%%P\n' | awk '{ if ($0 ~ /[[:space:]]/) print "%%dir \"" $0 "\""; else print "%%dir " $0 }'
+  find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
+    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }'
+} | sort > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -216,6 +221,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-7
+- Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-5
 - Filter all bundled sonames that no Fedora package provides; keep every
   provider-backed host dependency (regression-tested against Fedora 45 repodata)

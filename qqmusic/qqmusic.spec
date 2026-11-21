@@ -24,7 +24,7 @@ Source1:        https://deb.debian.org/debian/pool/main/f/fonts-wqy-microhei/fon
 
 Name:           qqmusic
 Version:        1.1.8
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        Tencent QQ Music desktop client for Linux
 License:        LicenseRef-Tencent-QQMusic-Software-License
 URL:            https://y.qq.com/
@@ -251,9 +251,15 @@ WRAPPER_EOF
 chmod 0755 %{buildroot}%{_bindir}/qqmusic
 sed -i 's|^Exec=/opt/qqmusic/qqmusic.*|Exec=/usr/bin/qqmusic %U|' \
     %{buildroot}%{_datadir}/applications/qqmusic.desktop
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
-    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }' \
-    | sort > %{_builddir}/%{name}-filelist
+{
+  find %{buildroot} -mindepth 1 -type d \
+    ! -path '%{buildroot}/usr/bin' ! -path '%{buildroot}/usr/sbin' \
+    ! -path '%{buildroot}/usr/lib' ! -path '%{buildroot}/usr/lib64' \
+    ! -path '%{buildroot}/opt/qqmusic/fc-sysroot/var/cache/fontconfig' \
+    -printf '/%%P\n' | awk '{ if ($0 ~ /[[:space:]]/) print "%%dir \"" $0 "\""; else print "%%dir " $0 }'
+  find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
+    | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }'
+} | sort > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -269,6 +275,8 @@ fi
 %dir %attr(1777, root, root) /opt/qqmusic/fc-sysroot/var/cache/fontconfig
 
 %changelog
+* Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 1.1.8-9
+- Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.1.8-8
 - Real tofu fix: the bundled 2020-era fontconfig hardcodes /etc/fonts and
   ignores FONTCONFIG_PATH/FILE, and its 2020-era Skia renders Fedora 45's

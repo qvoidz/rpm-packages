@@ -1,5 +1,22 @@
 #!/usr/bin/env python3
-"""Guard the bundled-ELF dependency filters found by Fedora 45 install tests."""
+"""Guard the bundled-ELF dependency filters found by Fedora 45 install tests.
+
+Two filter schemes exist in this repository:
+
+1. Closed scheme (current standard for closed-source repacks):
+   %global __requires_exclude ^.*$  plus an explicit Requires list generated
+   mechanically from `rpm -qpR` on the payload (Fedora-provided sonames are
+   declared; bundled private libraries resolve via $ORIGIN runpath). Here the
+   automatic filter hides EVERYTHING, so the guard instead asserts that the
+   spec declares the root host dependency (glibc) explicitly. The full host
+   soname list is generated mechanically at build time and verified by the
+   Fedora 45 container install/verify tests (scripts/verify-packages.sh),
+   which is the real completeness check; a static guard cannot re-run that.
+
+2. Narrow scheme (legacy, e.g. musl payloads): the filter enumerates only
+   bundled/private sonames, so it must NOT swallow host requirements that
+   rpm's automatic dependency scan would otherwise expose.
+"""
 from __future__ import annotations
 
 import re
@@ -90,11 +107,28 @@ CASES = {
     ],
 }
 
-# These host requirements must remain visible to Fedora's dependency solver.
-HOST_REQUIREMENTS = (
-    "libc.so.6(GLIBC_2.34)(64bit)",
-    "libgtk-3.so.0()(64bit)",
-)
+# Root host dependency every ELF payload needs. Under the closed filter it is
+# hidden along with everything else, so the spec must declare it explicitly,
+# either as a soname Requires (libc.so.6, with or without a symbol version)
+# or as a package Requires (glibc).
+GLIBC_SONAME = "libc.so.6"
+GLIBC_PACKAGES = ("glibc",)
+
+CLOSED_FILTER = re.compile(r"^\^\.\*\$$")
+
+
+def is_closed_filter(pattern: str) -> bool:
+    return CLOSED_FILTER.match(pattern.strip()) is not None
+
+
+def declares_glibc(text: str) -> bool:
+    if GLIBC_SONAME in text:
+        return True
+    return any(
+        re.search(rf"(?m)^Requires:\s*{re.escape(pkg)}\s*$", text)
+        for pkg in GLIBC_PACKAGES
+    )
+
 
 def main() -> int:
     failures: list[str] = []
@@ -116,15 +150,25 @@ def main() -> int:
         for requirement in requirements:
             if not pattern.search(requirement):
                 failures.append(f"{spec_name}: filter does not match {requirement}")
-        for requirement in HOST_REQUIREMENTS:
-            if pattern.search(requirement):
-                failures.append(f"{spec_name}: filter hides host requirement {requirement}")
+        if is_closed_filter(match.group(1)):
+            if not declares_glibc(text):
+                failures.append(
+                    f"{spec_name}: closed filter hides every host requirement "
+                    f"but the spec declares neither {GLIBC_SONAME} nor "
+                    f"{GLIBC_PACKAGES} explicitly")
+        else:
+            # Narrow filter: the legacy host requirements must stay visible.
+            for host_req in (GLIBC_SONAME, "libgtk-3.so.0"):
+                if pattern.search(f"{host_req}()(64bit)"):
+                    failures.append(
+                        f"{spec_name}: filter hides host requirement {host_req}")
         print(f"Checked {spec_name}: {len(requirements)} bundled sonames")
     if failures:
         print("\n".join(f"ERROR: {failure}" for failure in failures), file=sys.stderr)
         return 1
     print(f"Bundled runtime dependency filters passed ({len(CASES)} specs).")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

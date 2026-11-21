@@ -18,7 +18,7 @@
 # scripts/check-updates.py rewrites both Version and Source0 automatically).
 Name:           wemeet
 Version:        3.26.10.401
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Tencent Meeting desktop client for Linux
 License:        LicenseRef-Tencent-Meeting-Software-License
 URL:            https://meeting.tencent.com/
@@ -192,7 +192,13 @@ tar xJf data.tar.xz
 rm -f data.tar.xz
 chmod 0755 %{buildroot}/opt/wemeet/wemeetapp.sh 2>/dev/null || :
 chmod 0755 %{buildroot}/opt/wemeet/bin/wemeetapp 2>/dev/null || :
-find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' | sort > %{_builddir}/%{name}-filelist
+{
+  find %{buildroot} -mindepth 1 -type d \
+    ! -path '%{buildroot}/usr/bin' ! -path '%{buildroot}/usr/sbin' \
+    ! -path '%{buildroot}/usr/lib' ! -path '%{buildroot}/usr/lib64' \
+    -printf '/%%P\n' | awk '{ if ($0 ~ /[[:space:]]/) print "%%dir \"" $0 "\""; else print "%%dir " $0 }'
+  find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n'
+} | sort > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -207,6 +213,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 3.26.10.401-6
+- Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.26.10.401-4
 - Filter all bundled sonames that no Fedora package provides; keep every
   provider-backed host dependency (regression-tested against Fedora 45 repodata)

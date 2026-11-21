@@ -24,7 +24,7 @@
 
 Name:           netease-cloud-music
 Version:        1.2.1
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        NetEase Cloud Music (网易云音乐) desktop client for Linux
 License:        LicenseRef-NetEase-CloudMusic-Software-License
 URL:            https://music.163.com/
@@ -314,8 +314,11 @@ ar p '%{SOURCE0}' data.tar.xz | tar xJ -C %{buildroot} --no-same-owner
 # else (usr/bin, usr/share/...) stays unowned so the base packages keep
 # their directories.
 { find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n'
-  find %{buildroot}/opt -mindepth 1 -type d -printf '/opt/%%P\n' 2>/dev/null
-} | sort -u | sed 's|.*|"&"|' > %{_builddir}/%{name}-filelist
+  find %{buildroot} -mindepth 1 -type d \
+    ! -path '%{buildroot}/usr/bin' ! -path '%{buildroot}/usr/sbin' \
+    ! -path '%{buildroot}/usr/lib' ! -path '%{buildroot}/usr/lib64' \
+    -printf '/%%P\n' | sed 's|^|%%dir |'
+} | sort -u | sed -e 's|.*|"&"|' -e 's|^"%dir \(.*\)"$|%dir \1|' > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -333,6 +336,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 1.2.1-8
+- Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.2.1-6
 - Filter all bundled sonames that no Fedora package provides; keep every
   provider-backed host dependency (regression-tested against Fedora 45 repodata)

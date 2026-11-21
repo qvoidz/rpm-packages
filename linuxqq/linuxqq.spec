@@ -30,7 +30,7 @@
 
 Name:           linuxqq
 Version:        3.2.35
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
@@ -80,16 +80,18 @@ esac
 mkdir -p %{buildroot}
 cd %{buildroot}
 rpm2cpio '%{SOURCE0}' | cpio -idm --quiet --no-absolute-filenames
-# Own: every file/symlink, the private /opt payload tree, and the dirs the
-# upstream RPM itself owns (/usr/lib/.build-id/...). Other directories are
-# deliberately left unowned: rpm creates parents at install time, base
-# packages own them, and claiming one with a mismatched mode conflicts
-# (e.g. filesystem ships /usr/lib read-only 0555, upstream's cpio carries
-# no directory entries at all).
+# Own: every file/symlink and every payload directory, so uninstall leaves
+# no orphaned empty dirs. Only /usr/lib and /usr/lib64 themselves are
+# deliberately left unowned: filesystem ships them read-only 0555 and
+# claiming them with a mismatched mode conflicts. Their subdirectories
+# (e.g. /usr/lib/.build-id from the upstream RPM) are owned normally.
 { find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n'
-  find %{buildroot}/opt -mindepth 1 -type d -printf '/opt/%%P\n' 2>/dev/null
+  find %{buildroot} -mindepth 1 -type d \
+    ! -path '%{buildroot}/usr/bin' ! -path '%{buildroot}/usr/sbin' \
+    ! -path '%{buildroot}/usr/lib' ! -path '%{buildroot}/usr/lib64' \
+    -printf '/%%P\n' | sed 's|^|%%dir |'
   rpm -qp --dump '%{SOURCE0}' | awk '$5 ~ /^04/ {print $1}'
-} | sort -u | sed 's|.*|"&"|' > %{_builddir}/%{name}-filelist
+} | sort -u | sed -e 's|.*|"&"|' -e 's|^"%dir \(.*\)"$|%dir \1|' > %{_builddir}/%{name}-filelist
 
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -104,6 +106,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 3.2.35-11
+- Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-10
 - Suppress auto-generated requires of bundled libraries (openssl 1.1 sonames,
   libbugly/libcrbase/liblinux_compat.so); they all ship in the payload and
