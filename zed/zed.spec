@@ -12,12 +12,12 @@
 # scripts/check-updates.py rewrites Version and Source0 from
 # releases/latest (tag v<version>, asset zed-linux-x86_64.tar.gz).
 Name:           zed
-Version:        1.29.2
-Release:        3%{?dist}
+Version:        1.29.3
+Release:        1%{?dist}
 Summary:        Zed - a high-performance, multiplayer code editor
 License:        LicenseRef-Zed-License
 URL:            https://zed.dev/
-Source0:        https://github.com/zed-industries/zed/releases/download/v1.29.2/zed-linux-x86_64.tar.gz
+Source0:        https://github.com/zed-industries/zed/releases/download/v1.29.3/zed-linux-x86_64.tar.gz
 
 ExclusiveArch:  x86_64
 BuildRequires:  coreutils
@@ -66,6 +66,8 @@ fi
 %{_bindir}/zed
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.29.3-1
+- Update to upstream Zed v1.29.3
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.29.2-3
 - Check the /usr/bin/zed symlink itself; its absolute target is outside buildroot
 
