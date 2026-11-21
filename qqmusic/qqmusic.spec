@@ -16,7 +16,7 @@
 # rewrites both Version and Source0 automatically.
 Name:           qqmusic
 Version:        1.1.8
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Tencent QQ Music desktop client for Linux
 License:        LicenseRef-Tencent-QQMusic-Software-License
 URL:            https://y.qq.com/
@@ -112,6 +112,13 @@ ar x %{SOURCE0} data.tar.xz
 tar xJf data.tar.xz
 rm -f data.tar.xz
 chmod 0755 %{buildroot}/opt/qqmusic/qqmusic 2>/dev/null || :
+# Upstream froze on Electron 11 (Chromium 80, 2021). Its seccomp sandbox
+# policy predates glibc's clone3(): on modern kernels the browser process
+# is killed by SIGSYS immediately at startup (verified via coredumpctl).
+# The sandbox cannot be repaired in-place; --no-sandbox is the standard
+# workaround for this frozen build (same as the AUR package).
+sed -i 's|^Exec=/opt/qqmusic/qqmusic|Exec=/opt/qqmusic/qqmusic --no-sandbox|' \
+    %{buildroot}%{_datadir}/applications/qqmusic.desktop
 find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
     | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }' \
     | sort > %{_builddir}/%{name}-filelist
@@ -129,6 +136,11 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.1.8-6
+- Launch with --no-sandbox: the bundled Chromium 80 seccomp policy predates
+  glibc clone3() and kills the process with SIGSYS on current kernels
+  (fixes instant crash on launch; coredump-verified root cause)
+
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.1.8-4
 - Filter all bundled sonames that no Fedora package provides; keep every
   provider-backed host dependency (regression-tested against Fedora 45 repodata)
