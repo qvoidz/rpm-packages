@@ -16,7 +16,7 @@
 # rewrites both Version and Source0 automatically.
 Name:           qqmusic
 Version:        1.1.8
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Tencent QQ Music desktop client for Linux
 License:        LicenseRef-Tencent-QQMusic-Software-License
 URL:            https://y.qq.com/
@@ -112,12 +112,67 @@ ar x %{SOURCE0} data.tar.xz
 tar xJf data.tar.xz
 rm -f data.tar.xz
 chmod 0755 %{buildroot}/opt/qqmusic/qqmusic 2>/dev/null || :
-# Upstream froze on Electron 11 (Chromium 80, 2021). Its seccomp sandbox
-# policy predates glibc's clone3(): on modern kernels the browser process
-# is killed by SIGSYS immediately at startup (verified via coredumpctl).
-# The sandbox cannot be repaired in-place; --no-sandbox is the standard
-# workaround for this frozen build (same as the AUR package).
-sed -i 's|^Exec=/opt/qqmusic/qqmusic|Exec=/opt/qqmusic/qqmusic --no-sandbox|' \
+# Upstream froze on Electron 11 (Chromium 80, 2021). Two binary-inherited
+# problems need launch-time workarounds:
+# 1) its seccomp sandbox policy predates glibc clone3(): on current kernels
+#    the process dies with SIGSYS right after launch (coredump-verified);
+# 2) it statically links a 2020-era fontconfig whose parser cannot read the
+#    modern config syntax shipped by fontconfig >= 2.16 (urn: DTD, xsi:nil
+#    attributes). Config parsing fails, no font directories are configured
+#    and every glyph renders as tofu. Ship a legacy-syntax fonts.conf that
+#    resolves the generic families and the CJK families the UI stylesheets
+#    request to Noto CJK, and select it via FONTCONFIG_PATH.
+# Both are applied by the /usr/bin/qqmusic wrapper.
+mkdir -p %{buildroot}%{_bindir} %{buildroot}/opt/qqmusic/etc/fonts
+cat > %{buildroot}/opt/qqmusic/etc/fonts/fonts.conf <<'FONTS_EOF'
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+  <dir>/usr/share/fonts</dir>
+  <dir>/usr/local/share/fonts</dir>
+  <dir>~/.fonts</dir>
+  <dir>~/.local/share/fonts</dir>
+  <cachedir>/var/cache/fontconfig</cachedir>
+  <cachedir>~/.fontconfig</cachedir>
+
+  <alias><family>sans-serif</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias><family>serif</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias><family>monospace</family><prefer><family>Noto Sans Mono CJK SC</family></prefer></alias>
+
+  <alias binding="same"><family>Microsoft YaHei</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>微软雅黑</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>PingFang SC</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>Hiragino Sans GB</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>SimHei</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>黑体</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>SimSun</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias binding="same"><family>宋体</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias binding="same"><family>NSimSun</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias binding="same"><family>KaiTi</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias binding="same"><family>楷体</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias binding="same"><family>FangSong</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias binding="same"><family>仿宋</family><prefer><family>Noto Serif CJK SC</family></prefer></alias>
+  <alias binding="same"><family>Segoe UI</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>Helvetica</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>Arial</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+  <alias binding="same"><family>Roboto</family><prefer><family>Noto Sans CJK SC</family></prefer></alias>
+</fontconfig>
+FONTS_EOF
+cat > %{buildroot}%{_bindir}/qqmusic <<'WRAPPER_EOF'
+#!/bin/sh
+# Launch QQ Music with a legacy-syntax fontconfig tree: the bundled
+# Chromium 80 statically links a 2020-era fontconfig that cannot parse
+# current /etc/fonts syntax, which otherwise renders all text as tofu.
+# --no-sandbox is required because its seccomp policy predates glibc
+# clone3() and kills the process on current kernels. ELECTRON_RUN_AS_NODE
+# (exported by Electron-based terminals) would turn the app into a bare
+# Node REPL, so it is cleared first.
+unset ELECTRON_RUN_AS_NODE
+export FONTCONFIG_PATH=/opt/qqmusic/etc/fonts
+exec /opt/qqmusic/qqmusic --no-sandbox "$@"
+WRAPPER_EOF
+chmod 0755 %{buildroot}%{_bindir}/qqmusic
+sed -i 's|^Exec=/opt/qqmusic/qqmusic.*|Exec=/usr/bin/qqmusic %U|' \
     %{buildroot}%{_datadir}/applications/qqmusic.desktop
 find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' \
     | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }' \
@@ -136,6 +191,13 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.1.8-7
+- Fix all-glyph tofu rendering: Chromium 80 statically links a 2020-era
+  fontconfig that cannot parse modern /etc/fonts syntax (urn: DTD,
+  xsi:nil). Ship a legacy-syntax fonts.conf (generic families + the CJK
+  families the UI requests -> Noto CJK) and select it via FONTCONFIG_PATH
+  in a /usr/bin/qqmusic wrapper; desktop Exec now uses the wrapper
+
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.1.8-6
 - Launch with --no-sandbox: the bundled Chromium 80 seccomp policy predates
   glibc clone3() and kills the process with SIGSYS on current kernels
