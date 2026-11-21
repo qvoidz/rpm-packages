@@ -94,6 +94,8 @@ DINGTALK_GRAY_JSON = ("https://dtapp-pub.dingtalk.com/dingtalk-desktop/"
                       "linux_dingtalk_update_package_gray.json")
 NETEASE_PAGE = "https://music.163.com/download"
 TELEGRAM_REPO = "telegramdesktop/tdesktop"
+ZCODE_MANIFEST_URL = ("https://zcode.z.ai/api/v1/releases/electron/manifest"
+                      "?platform=linux-x64&channel=stable")
 
 USER_AGENT = {"User-Agent": "qvoidz-rpm-packages-spec-bumper"}
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -746,6 +748,38 @@ def sync_telegram(dry_run):
     return f"telegram-desktop: {current} -> {version}"
 
 
+def sync_zcode(dry_run):
+    """ZCode: Z.ai release manifest API (YAML with version + CDN file URLs).
+
+    Linux installers are not on GitHub Releases; the manifest endpoint
+    https://zcode.z.ai/api/v1/releases/electron/manifest
+    ?platform=linux-x64&channel=stable lists the versioned RPM on
+    cdn-zcode.z.ai. Both Version and Source0 are rewritten on update.
+    """
+    spec = read_spec("zcode")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(ZCODE_MANIFEST_URL, headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        manifest = response.read().decode("utf-8", "replace")
+    version_hit = re.search(r"(?m)^version:\s*([0-9][0-9.]*)\s*$", manifest)
+    url_hit = re.search(
+        r"(?m)^\s*-\s*url:\s*(https://cdn-zcode\.z\.ai/\S+\.rpm)\s*$",
+        manifest)
+    if not version_hit or not url_hit:
+        raise RuntimeError("ZCode manifest missing version or rpm URL")
+    version = version_hit.group(1)
+    if rpm_vercmp(version, current) <= 0:
+        return f"zcode: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{url_hit.group(1)}",
+                      spec, count=1)
+        write_spec("zcode", bump_spec(
+            "zcode", spec, version, "1%{?dist}",
+            f"Update to upstream ZCode {version}"))
+    CHANGED.append("zcode")
+    return f"zcode: {current} -> {version}"
+
+
 def selftest():
     cases = [
         ("0.9.4", "0.9.4", 0),
@@ -801,6 +835,7 @@ def main():
         ("dingtalk", sync_dingtalk),
         ("netease-cloud-music", sync_netease),
         ("telegram-desktop", sync_telegram),
+        ("zcode", sync_zcode),
     ]
     errors = []
     for package, check in checks:

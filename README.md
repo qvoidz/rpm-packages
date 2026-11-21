@@ -24,6 +24,7 @@
 | [钉钉](https://www.dingtalk.com/) | 官方 x86_64 .deb 重打包为 RPM |
 | [网易云音乐](https://music.163.com/) | 官方 x86_64 .deb 重打包为 RPM（Referer 防盗链 CDN） |
 | [Telegram Desktop](https://telegram.org/) | 官方 Linux portable tar.xz 原样重打包（GitHub releases/latest 跟踪） |
+| [ZCode](https://zcode.z.ai/) | 智谱 Z.ai 官方 AI 编程工作台，Linux RPM 从发布清单 CDN 重打包 |
 | edge-repo | 装上后即可 `dnf install microsoft-edge-stable` |
 | vscode-repo | 装上后即可 `dnf install code` |
 
@@ -35,7 +36,7 @@ WeTypeX 的专有运行时不在其上游 RPM 内，需按上游说明单独安�
 sudo dnf copr enable qvoidz/rpm-packages
 sudo dnf install wechat workbuddy flclash fcitx5-wetypex flyline linuxqq wemeet iptvnator waydroid-script \
     nerd-fonts-cascadia-code lazyvim zed starship qqmusic wps-office dingtalk netease-cloud-music \
-    telegram-desktop edge-repo vscode-repo
+    telegram-desktop zcode edge-repo vscode-repo
 sudo dnf upgrade   # 日常升级
 ```
 
@@ -78,6 +79,7 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 | dingtalk | 官方更新 JSON 的版本描述（灰度通道，可能略滞后于实际最新版） |
 | netease-cloud-music | 官方下载页解析 .deb 文件名（上游 2019 年起冻结在 1.2.1） |
 | telegram-desktop | Telegram 官方 GitHub `releases/latest`（tag `v<版本>`，资产 `td-setup-linux-x64-<版本>.tar.xz`） |
+| zcode | 智谱 ZCode 更新清单 API（`api/v1/releases/electron/manifest?platform=linux-x64`，YAML 中的版本号 + RPM CDN 地址） |
 
 发现新版本后，工作流自动完成：
 
