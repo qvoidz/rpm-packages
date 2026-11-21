@@ -169,6 +169,7 @@ cat > %{buildroot}%{_bindir}/qqmusic <<'WRAPPER_EOF'
 # Node REPL, so it is cleared first.
 unset ELECTRON_RUN_AS_NODE
 export FONTCONFIG_PATH=/opt/qqmusic/etc/fonts
+export FONTCONFIG_FILE=/opt/qqmusic/etc/fonts/fonts.conf
 exec /opt/qqmusic/qqmusic --no-sandbox "$@"
 WRAPPER_EOF
 chmod 0755 %{buildroot}%{_bindir}/qqmusic
