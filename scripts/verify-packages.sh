@@ -12,7 +12,7 @@ set -uo pipefail
 PACKAGES=(
   FlClash fcitx5-wetypex flyline wechat workbuddy linuxqq wemeet iptvnator
   waydroid-script nerd-fonts-cascadia-code lazyvim zed starship qqmusic
-  wps-office dingtalk netease-cloud-music edge-repo vscode-repo zcode
+  wps-office dingtalk edge-repo vscode-repo zcode
   nvim-vim-shim
 )
 
@@ -72,10 +72,6 @@ check_installed() {
             ;;
         wps-office)
             [[ -x /usr/bin/wps ]]
-            ;;
-        netease-cloud-music)
-            [[ -s /usr/share/applications/netease-cloud-music.desktop &&
-               -x /opt/netease/netease-cloud-music/netease-cloud-music.bash ]]
             ;;
         edge-repo)
             [[ -s /etc/yum.repos.d/microsoft-edge.repo ]] &&

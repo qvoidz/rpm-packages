@@ -42,21 +42,6 @@ CASES = {
     "fcitx5-wetypex/fcitx5-wetypex.spec": [
         "libkqueue.so.0()(64bit)",
     ],
-    "netease-cloud-music/netease-cloud-music.spec": [
-        "libutil-setid.so.0()(64bit)",
-        "libutil-setid.so.0(SAMBA_4.7.6_UBUNTU)(64bit)",
-        "libutil-tdb.so.0()(64bit)",
-        "libutil-tdb.so.0(SAMBA_4.7.6_UBUNTU)(64bit)",
-        "libvpx.so.5()(64bit)",
-        "libwacom.so.2()(64bit)",
-        "libwebp.so.6()(64bit)",
-        "libwinbind-client.so.0()(64bit)",
-        "libwinbind-client.so.0(SAMBA_4.7.6_UBUNTU)(64bit)",
-        "libwind-samba4.so.0()(64bit)",
-        "libwind-samba4.so.0(HEIMDAL_WIND_1.0)(64bit)",
-        "libx264.so.152()(64bit)",
-        "libx265.so.146()(64bit)",
-    ],
     "qqmusic/qqmusic.spec": [
         "libffmpeg.so()(64bit)",
     ],

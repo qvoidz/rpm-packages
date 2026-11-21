@@ -7,3 +7,6 @@ public/
 .mach
 .mach-dnflog
 .mach-bootstrap.log
+
+# Python bytecode
+__pycache__/
