@@ -1,7 +1,7 @@
 name: Mirror upstream payloads
 
-# Fetches payloads that Tencent/NetEase gate behind real-time URL signing
-# or Referer checks and publishes them as GitHub Release assets, so COPR
+# Fetches payloads that Tencent gates behind real-time URL signing
+# and publishes them as GitHub Release assets, so COPR
 # can fetch them as plain Source0 URLs. COPR's binary build chroots are
 # fully offline (probed: even mirrors.fedoraproject.org is unreachable);
 # only the SRPM stage has network access, and it can only do bare GETs.
