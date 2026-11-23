@@ -24,7 +24,7 @@ Source1:        https://deb.debian.org/debian/pool/main/f/fonts-wqy-microhei/fon
 
 Name:           qqmusic
 Version:        1.1.8
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        Tencent QQ Music desktop client for Linux
 License:        LicenseRef-Tencent-QQMusic-Software-License
 URL:            https://y.qq.com/
@@ -261,6 +261,13 @@ sed -i 's|^Exec=/opt/qqmusic/qqmusic.*|Exec=/usr/bin/qqmusic %U|' \
     | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }'
 } | sort > %{_builddir}/%{name}-filelist
 
+# Electron apps under Wayland compositors (niri) can lose fcitx5 IME input;
+# pin the X11 ozone platform for every desktop entry this payload ships.
+for f in %{buildroot}%{_datadir}/applications/*.desktop; do
+    [ -f "$f" ] || continue
+    sed -i -e 's|^Exec=\(.*\)|Exec=env ELECTRON_OZONE_PLATFORM_HINT=x11 \1|' "$f" || :
+done
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q || :
@@ -275,6 +282,9 @@ fi
 %dir %attr(1777, root, root) /opt/qqmusic/fc-sysroot/var/cache/fontconfig
 
 %changelog
+* Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 1.1.8-10
+- Inject ELECTRON_OZONE_PLATFORM_HINT=x11 into desktop Exec lines:
+  Electron under Wayland (niri) loses fcitx5 IME input
 * Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 1.1.8-9
 - Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 1.1.8-8

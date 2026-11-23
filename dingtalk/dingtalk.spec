@@ -20,7 +20,7 @@
 # verifies the constructed URL before rewriting Version and Source0.
 Name:           dingtalk
 Version:        8.3.1.261008001
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        DingTalk (钉钉) desktop client for Linux
 License:        LicenseRef-Alibaba-DingTalk-Software-License
 URL:            https://www.dingtalk.com/
@@ -208,6 +208,13 @@ chmod 0755 %{buildroot}/opt/dingtalk/dingtalk 2>/dev/null || :
     | awk '{ if ($0 ~ /[[:space:]]/) printf("\"%s\"\n", $0); else print }'
 } | sort > %{_builddir}/%{name}-filelist
 
+# Electron apps under Wayland compositors (niri) can lose fcitx5 IME input;
+# pin the X11 ozone platform for every desktop entry this payload ships.
+for f in %{buildroot}%{_datadir}/applications/*.desktop; do
+    [ -f "$f" ] || continue
+    sed -i -e 's|^Exec=\(.*\)|Exec=env ELECTRON_OZONE_PLATFORM_HINT=x11 \1|' "$f" || :
+done
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q || :
@@ -221,6 +228,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-8
+- Inject ELECTRON_OZONE_PLATFORM_HINT=x11 into desktop Exec lines:
+  Electron under Wayland (niri) loses fcitx5 IME input
 * Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-7
 - Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 8.3.1.261008001-5
