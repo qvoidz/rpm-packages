@@ -24,7 +24,7 @@ Source1:        https://deb.debian.org/debian/pool/main/f/fonts-wqy-microhei/fon
 
 Name:           qqmusic
 Version:        1.1.8
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Tencent QQ Music desktop client for Linux
 License:        LicenseRef-Tencent-QQMusic-Software-License
 URL:            https://y.qq.com/
@@ -32,6 +32,7 @@ URL:            https://y.qq.com/
 ExclusiveArch:  x86_64
 BuildRequires:  binutils
 BuildRequires:  coreutils
+BuildRequires:  python3
 BuildRequires:  tar
 BuildRequires:  xz
 
@@ -103,8 +104,9 @@ Requires: xdg-utils
 
 %description
 Tencent QQ Music (QQ音乐) desktop client for Linux, distributed by
-Tencent. This package repacks the official upstream .deb without
-rebuilding or modifying the application binaries.
+Tencent. This package repacks the official upstream .deb. The bundled
+Electron 8.2.1 MPRIS bridge is binary-patched so the desktop media
+widget can control playback and shows "QQMusic" as the source.
 
 %prep
 echo "Source0 tracks Tencent's official QQ Music .deb via the signed redirect CGI."
@@ -119,6 +121,41 @@ ar x %{SOURCE0} data.tar.xz
 tar xJf data.tar.xz
 rm -f data.tar.xz
 chmod 0755 %{buildroot}/opt/qqmusic/qqmusic 2>/dev/null || :
+# Binary patch the bundled Electron 8.2.1 (Chromium 80) MPRIS bridge.
+# Chromium 80's system_media_controls_linux.cc hardcodes two MPRIS flaws
+# that break DankMaterialShell's media widget:
+# 1) CanControl is compiled as DbusBoolean(false) with no runtime setter,
+#    so quickshell computes canGoNext/canPlay/canPause = canControl && X
+#    = false and DMS silently drops every control command (playerctl
+#    ignores CanControl, hence works). Patch: the CanControl property
+#    block ends with "lea r15,[rbp-0x50]; mov rdi,r15; xor esi,esi" (the
+#    xor passes value=false to the DbusBoolean ctor); rewritten as an
+#    equivalent-length "lea rdi,[rbp-0x50]; mov esi,1" (r15 is a
+#    callee-saved register already holding the same value from the
+#    previous property block, and no call intervenes, so dropping the
+#    redundant r15 reload is safe).
+# 2) The Identity property is a stack-built movabs "Chromium" immediate,
+#    shown verbatim as the media widget's source label. Patch it to
+#    "QQMusic". (The first naive attempt - patching the lone standalone
+#    rodata "Chromium" near ANGLE/GPU strings - segfaulted the app on
+#    launch; the movabs site below is the only reference the MPRIS
+#    Identity setter uses.)
+# Both patches assert their original bytes so a newer upstream binary
+# fails the build instead of silently shipping unpatched.
+python3 - <<'MPRIS_PATCH_EOF'
+p = '%{buildroot}/opt/qqmusic/qqmusic'
+d = bytearray(open(p, 'rb').read())
+# Patch 1: CanControl = true
+off1, old1, new1 = 0x41b28df, bytes([0x4c,0x8d,0x7d,0xb0,0x4c,0x89,0xff,0x31,0xf6]), bytes([0x48,0x8d,0x7d,0xb0,0xbe,0x01,0x00,0x00,0x00])
+assert bytes(d[off1:off1+9]) == old1, "CanControl patch site mismatch (upstream binary changed?)"
+d[off1:off1+9] = new1
+# Patch 2: Identity "Chromium" -> "QQMusic"
+off2, old2, new2 = 0x41b1d46, b'Chromium', b'QQMusic\x00'
+assert bytes(d[off2:off2+8]) == old2, "Identity patch site mismatch (upstream binary changed?)"
+d[off2:off2+8] = new2
+open(p, 'wb').write(d)
+print("MPRIS binary patches applied (CanControl=true, Identity=QQMusic)")
+MPRIS_PATCH_EOF
 # Upstream froze on Electron 11 (Chromium 80, 2021). Three binary-inherited
 # problems need launch-time workarounds:
 # 1) its seccomp sandbox policy predates glibc clone3(): on current kernels
@@ -282,6 +319,13 @@ fi
 %dir %attr(1777, root, root) /opt/qqmusic/fc-sysroot/var/cache/fontconfig
 
 %changelog
+* Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 1.1.8-11
+- Binary-patch the bundled Chromium 80 MPRIS bridge: CanControl hardcodes
+  false so quickshell-based shells (DMS) silently drop all media control
+  commands (next/previous/playPause verified working), and patch the
+  Identity property "Chromium" -> "QQMusic" for the media widget's source
+  label. Patch sites assert original bytes; build fails loudly on any
+  upstream binary change
 * Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 1.1.8-10
 - Inject ELECTRON_OZONE_PLATFORM_HINT=x11 into desktop Exec lines:
   Electron under Wayland (niri) loses fcitx5 IME input
