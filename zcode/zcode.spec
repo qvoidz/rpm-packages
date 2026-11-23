@@ -19,12 +19,12 @@
 # The URL embeds the version and changes with every release, so
 # scripts/check-updates.py rewrites both Version and Source0 automatically.
 Name:           zcode
-Version:        3.18.2
+Version:        3.19.1
 Release:        1%{?dist}
 Summary:        ZCode AI coding workbench desktop client from Z.ai
 License:        Apache-2.0
 URL:            https://zcode.z.ai/
-Source0:        https://cdn-zcode.z.ai/zcode/electron/releases/3.18.2/linux-x64/ZCode-3.18.2-linux-x64.rpm
+Source0:        https://cdn-zcode.z.ai/zcode/electron/releases/3.19.1/linux-x64/ZCode-3.19.1-linux-x64.rpm
 
 ExclusiveArch:  x86_64
 BuildRequires:  cpio
@@ -125,6 +125,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Mon Nov 23 2026 COPR Builder <copr@example.invalid> - 3.19.1-1
+- Update to upstream ZCode 3.19.1
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.18.2-1
 - Repackage the official Z.ai ZCode Linux RPM (from the release manifest
   CDN channel) for COPR

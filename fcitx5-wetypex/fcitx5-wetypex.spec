@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 # Upstream release tags look like v<version>-<upstream_rel>, e.g. v3.0.1.684-9.
 # scripts/check-updates.py keeps both globals in sync with the latest tag.
-%global upstream_rel 9
+%global upstream_rel 10
 # Payload bundles its own copies of libkqueue etc.; keep auto-Provides from
 # exposing them as soname provides (would shadow the real Fedora packages).
 %global __provides_exclude ^.*$
@@ -13,7 +13,7 @@ Name:           fcitx5-wetypex
 Version:        3.0.1.684
 # Repack counter (.2) forces an upgrade over the -9 COPR build for the same
 # upstream release; check-updates.py drops it on the next upstream tag bump.
-Release:        %{upstream_rel}.6%{?dist}
+Release:        %{upstream_rel}%{?dist}
 Summary:        WeTypeX input method adapter for Fcitx5
 License:        GPL-3.0-or-later
 URL:            https://github.com/panxuc/fcitx5-wetypex
@@ -175,6 +175,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Mon Nov 23 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-10
+- Update to upstream v3.0.1.684-10
 * Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-
 - Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.0.1.684-upstream_rel.4
