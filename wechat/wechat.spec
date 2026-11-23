@@ -14,7 +14,7 @@
 %global __requires_exclude ^.*$
 Name:           wechat
 Version:        4.1.13.29
-Release:        5%{?dist}
+Release:        6%{?dist}
 
 # Explicit host dependencies (auto-generated from Fedora 45 repodata; bundled private sonames excluded)
 Requires: ld-linux-x86-64.so.2()(64bit)
@@ -105,6 +105,13 @@ rpm2cpio %{SOURCE0} | cpio -idm --quiet --no-absolute-filenames
   find %{buildroot} -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n'
 } | sort > %{_builddir}/%{name}-filelist
 
+# Electron apps under Wayland compositors (niri) can lose fcitx5 IME input;
+# pin the X11 ozone platform for every desktop entry this payload ships.
+for f in %{buildroot}%{_datadir}/applications/*.desktop; do
+    [ -f "$f" ] || continue
+    sed -i -e 's|^Exec=\(.*\)|Exec=env ELECTRON_OZONE_PLATFORM_HINT=x11 \1|' "$f" || :
+done
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q || :
@@ -118,6 +125,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-6
+- Inject ELECTRON_OZONE_PLATFORM_HINT=x11 into desktop Exec lines:
+  Electron under Wayland (niri) loses fcitx5 IME input
 * Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-5
 - Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 4.1.13.29-3

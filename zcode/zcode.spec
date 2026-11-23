@@ -19,12 +19,12 @@
 # The URL embeds the version and changes with every release, so
 # scripts/check-updates.py rewrites both Version and Source0 automatically.
 Name:           zcode
-Version:        3.18.2
-Release:        1%{?dist}
+Version:        3.19.1
+Release:        2%{?dist}
 Summary:        ZCode AI coding workbench desktop client from Z.ai
 License:        Apache-2.0
 URL:            https://zcode.z.ai/
-Source0:        https://cdn-zcode.z.ai/zcode/electron/releases/3.18.2/linux-x64/ZCode-3.18.2-linux-x64.rpm
+Source0:        https://cdn-zcode.z.ai/zcode/electron/releases/3.19.1/linux-x64/ZCode-3.19.1-linux-x64.rpm
 
 ExclusiveArch:  x86_64
 BuildRequires:  cpio
@@ -112,6 +112,13 @@ find opt/ZCode -type d -printf '%%%%dir /%p\n' > %{_builddir}/%{name}-filelist
 find . -mindepth 1 \( -type f -o -type l \) -printf '/%%P\n' >> %{_builddir}/%{name}-filelist
 sort -o %{_builddir}/%{name}-filelist %{_builddir}/%{name}-filelist
 
+# Electron apps under Wayland compositors (niri) can lose fcitx5 IME input;
+# pin the X11 ozone platform for every desktop entry this payload ships.
+for f in %{buildroot}%{_datadir}/applications/*.desktop; do
+    [ -f "$f" ] || continue
+    sed -i -e 's|^Exec=\(.*\)|Exec=env ELECTRON_OZONE_PLATFORM_HINT=x11 \1|' "$f" || :
+done
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q || :
@@ -125,6 +132,11 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 3.19.1-2
+- Inject ELECTRON_OZONE_PLATFORM_HINT=x11 into desktop Exec lines:
+  Electron under Wayland (niri) loses fcitx5 IME input
+* Mon Nov 23 2026 COPR Builder <copr@example.invalid> - 3.19.1-1
+- Update to upstream ZCode 3.19.1
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 3.18.2-1
 - Repackage the official Z.ai ZCode Linux RPM (from the release manifest
   CDN channel) for COPR

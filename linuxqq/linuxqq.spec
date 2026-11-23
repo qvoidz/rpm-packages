@@ -30,7 +30,7 @@
 
 Name:           linuxqq
 Version:        3.2.35
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        QQ desktop client from Tencent (NTQQ)
 License:        LicenseRef-Tencent-QQ-Software-License
 URL:            https://im.qq.com/linuxqq/
@@ -93,6 +93,13 @@ rpm2cpio '%{SOURCE0}' | cpio -idm --quiet --no-absolute-filenames
   rpm -qp --dump '%{SOURCE0}' | awk '$5 ~ /^04/ {print $1}'
 } | sort -u | sed -e 's|.*|"&"|' -e 's|^"%dir \(.*\)"$|%dir \1|' > %{_builddir}/%{name}-filelist
 
+# Electron apps under Wayland compositors (niri) can lose fcitx5 IME input;
+# pin the X11 ozone platform for every desktop entry this payload ships.
+for f in %{buildroot}%{_datadir}/applications/*.desktop; do
+    [ -f "$f" ] || continue
+    sed -i -e 's|^Exec=\(.*\)|Exec=env ELECTRON_OZONE_PLATFORM_HINT=x11 \1|' "$f" || :
+done
+
 %post
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q || :
@@ -106,6 +113,9 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 3.2.35-12
+- Inject ELECTRON_OZONE_PLATFORM_HINT=x11 into desktop Exec lines:
+  Electron under Wayland (niri) loses fcitx5 IME input
 * Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 3.2.35-11
 - Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Fri Nov 20 2026 COPR Builder <copr@example.invalid> - 3.2.35-10
