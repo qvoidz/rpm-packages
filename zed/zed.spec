@@ -12,12 +12,12 @@
 # scripts/check-updates.py rewrites Version and Source0 from
 # releases/latest (tag v<version>, asset zed-linux-x86_64.tar.gz).
 Name:           zed
-Version:        1.29.3
-Release:        2%{?dist}
+Version:        1.30.2
+Release:        1%{?dist}
 Summary:        Zed - a high-performance, multiplayer code editor
 License:        LicenseRef-Zed-License
 URL:            https://zed.dev/
-Source0:        https://github.com/zed-industries/zed/releases/download/v1.29.3/zed-linux-x86_64.tar.gz
+Source0:        https://github.com/zed-industries/zed/releases/download/v1.30.2/zed-linux-x86_64.tar.gz
 
 ExclusiveArch:  x86_64
 BuildRequires:  coreutils
@@ -94,6 +94,8 @@ fi
 %{_datadir}/icons/hicolor/1024x1024/apps/zed.png
 
 %changelog
+* Thu Nov 26 2026 COPR Builder <copr@example.invalid> - 1.30.2-1
+- Update to upstream Zed v1.30.2
 * Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 1.29.3-2
 - Ship upstream desktop file and hicolor icons so Zed appears in
   application launchers (Exec=zed %U matches the /usr/bin/zed symlink;
