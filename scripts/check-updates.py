@@ -362,7 +362,12 @@ def sync_workbuddy(dry_run):
     name, payload_version = rpm_header_sniff(url)
     if name != "workbuddy":
         raise RuntimeError(f"Unexpected WorkBuddy RPM package name: {name}")
-    if rpm_vercmp(payload_version, version) != 0:
+    # Since 5.11.6 Tencent moved the build id (e.g. 44396970) from the RPM
+    # Version into the Release, so the payload version (5.11.6) is a dotted
+    # prefix of the API version (5.11.6.44396970). Accept that shape as a
+    # match while still catching genuinely wrong payloads.
+    if not (rpm_vercmp(payload_version, version) == 0
+            or version.startswith(payload_version + ".")):
         raise RuntimeError(
             f"WorkBuddy API version {version} does not match RPM payload "
             f"version {payload_version}")

@@ -22,12 +22,12 @@
 # The URL embeds a build hash and changes with every release, so
 # scripts/check-updates.py rewrites both Version and Source0 automatically.
 Name:           workbuddy
-Version:        5.6.2.40046327
-Release:        7%{?dist}
+Version:        5.11.6.44396970
+Release:        1%{?dist}
 Summary:        WorkBuddy AI coding assistant desktop client from Tencent
 License:        LicenseRef-Tencent-WorkBuddy-Software-License
 URL:            https://www.workbuddy.cn/
-Source0:        https://download.codebuddy.cn/workbuddy/saas/linux-x64-rpm/WorkBuddy-linux-x64-rpm-5.6.2.40046327-c7b525f3.rpm
+Source0:        https://download.codebuddy.cn/workbuddy/saas/linux-x64-rpm/WorkBuddy-linux-x64-rpm-5.11.6.44396970-0f347fd9.rpm
 
 ExclusiveArch:  x86_64
 BuildRequires:  cpio
@@ -151,6 +151,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 27 2026 COPR Builder <copr@example.invalid> - 5.11.6.44396970-1
+- Update to upstream WorkBuddy 5.11.6.44396970
 * Sun Nov 23 2026 COPR Builder <copr@example.invalid> - 5.6.2.40046327-7
 - Inject ELECTRON_OZONE_PLATFORM_HINT=x11 into desktop Exec lines:
   Electron under Wayland (niri) loses fcitx5 IME input
