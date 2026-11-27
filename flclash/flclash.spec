@@ -20,8 +20,8 @@
 ExclusiveArch:  x86_64
 
 Name:           FlClash
-Version:        0.9.4
-Release:        9%{?dist}
+Version:        0.9.5
+Release:        1%{?dist}
 Summary:        A modern proxy client based on Clash
 License:        GPL-3.0-or-later
 URL:            https://github.com/chen08209/FlClash
@@ -119,6 +119,8 @@ fi
 %files -f %{_builddir}/%{name}-filelist
 
 %changelog
+* Fri Nov 27 2026 COPR Builder <copr@example.invalid> - 0.9.5-1
+- Update to upstream FlClash v0.9.5
 * Sun Nov 22 2026 COPR Builder <copr@example.invalid> - 0.9.4-9
 - Own every payload directory in the file list (except /usr/lib and /usr/lib64, which filesystem ships read-only 0555) so uninstall leaves no orphaned empty directories behind
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 0.9.4-8

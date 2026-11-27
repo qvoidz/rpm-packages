@@ -20,12 +20,12 @@
 # rewrites Version and Source0 from telegramdesktop/tdesktop
 # releases/latest (tag v<version>, asset td-setup-linux-x64-<version>.tar.xz).
 Name:           telegram-desktop
-Version:        7.4.6
+Version:        7.4.7
 Release:        1%{?dist}
 Summary:        Telegram Desktop messaging app (official portable build)
 License:        LicenseRef-Telegram-Desktop-License
 URL:            https://telegram.org/
-Source0:        https://github.com/telegramdesktop/tdesktop/releases/download/v7.4.6/td-setup-linux-x64-7.4.6.tar.xz
+Source0:        https://github.com/telegramdesktop/tdesktop/releases/download/v7.4.7/td-setup-linux-x64-7.4.7.tar.xz
 Source1:        https://raw.githubusercontent.com/telegramdesktop/tdesktop/dev/Telegram/Resources/art/icon512.png
 
 ExclusiveArch:  x86_64
@@ -120,6 +120,8 @@ fi
 %{_datadir}/applications/org.telegram.desktop.desktop
 
 %changelog
+* Fri Nov 27 2026 COPR Builder <copr@example.invalid> - 7.4.7-1
+- Update to upstream Telegram Desktop v7.4.7
 * Tue Nov 24 2026 COPR Builder <copr@example.invalid> - 7.4.6-1
 - Update to upstream Telegram Desktop v7.4.6
 * Sat Nov 21 2026 COPR Builder <copr@example.invalid> - 7.4.4-1
