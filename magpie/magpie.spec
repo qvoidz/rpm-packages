@@ -8,13 +8,13 @@
 # releases/latest of yetone/magpie-releases (tag v<version>, assets
 # magpie-linux-amd64 and magpie-cli-linux-amd64; both are required).
 Name:           magpie
-Version:        0.1.4989
+Version:        0.1.4992
 Release:        1%{?dist}
 Summary:        Magpie - one local gateway for every AI coding agent
 License:        MIT
 URL:            https://usemagpie.ai/
-Source0:        https://github.com/yetone/magpie-releases/releases/download/v0.1.4989/magpie-linux-amd64
-Source1:        https://github.com/yetone/magpie-releases/releases/download/v0.1.4989/magpie-cli-linux-amd64
+Source0:        https://github.com/yetone/magpie-releases/releases/download/v0.1.4992/magpie-linux-amd64
+Source1:        https://github.com/yetone/magpie-releases/releases/download/v0.1.4992/magpie-cli-linux-amd64
 
 ExclusiveArch:  x86_64
 BuildRequires:  coreutils
@@ -78,6 +78,8 @@ fi
 %{_datadir}/applications/magpie.desktop
 
 %changelog
+* Sat Nov 28 2026 COPR Builder <copr@example.invalid> - 0.1.4992-1
+- Update to upstream Magpie v0.1.4992
 * Sat Nov 28 2026 COPR Builder <copr@example.invalid> - 0.1.4989-1
 - Initial package: official desktop and CLI binaries plus a minimal
   desktop entry (upstream publishes no Linux .desktop file)
