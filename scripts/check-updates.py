@@ -36,6 +36,25 @@ Packages and their upstream sources:
 - telegram-desktop GitHub releases of telegramdesktop/tdesktop
                  (tag v<version>, Linux portable asset
                  td-setup-linux-x64-<version>.tar.xz).
+- opencode       GitHub releases of sst/opencode (tag v<version>, asset
+                 opencode-linux-x64.tar.gz).
+- opencode-desktop Same release as opencode; the desktop Electron RPM
+                 (upstream package name "opencode") is repacked under the
+                 name opencode-desktop to coexist with the CLI package.
+- claude-code    Anthropic's GCS release channel: the "stable" pointer file
+                 names the version; the binary is <v>/linux-x64/claude.
+- pi             GitHub releases of earendil-works/pi (tag v<version>,
+                 asset pi-linux-x64.tar.gz).
+- codex          GitHub releases of openai/codex (tag rust-v<version>,
+                 asset codex-x86_64-unknown-linux-musl.tar.gz).
+- magpie         GitHub releases of yetone/magpie-releases (tag v<version>,
+                 raw binaries magpie-linux-amd64 + magpie-cli-linux-amd64).
+- ccswitch       GitHub releases of farion1231/cc-switch (tag v<version>,
+                 asset CC-Switch-v<version>-Linux-x86_64.rpm; repacked
+                 under the package name "ccswitch").
+- codebuddy-ide  Tencent's update API
+                 (copilot.tencent.com/v2/update?platform=ide-linux-x64)
+                 returns version + .deb URL (domestic channel).
 
 When a newer upstream version is found, the matching spec file is rewritten
 (Version / Release / changelog) and the package names are reported through
@@ -95,6 +114,16 @@ DINGTALK_GRAY_JSON = ("https://dtapp-pub.dingtalk.com/dingtalk-desktop/"
 TELEGRAM_REPO = "telegramdesktop/tdesktop"
 ZCODE_MANIFEST_URL = ("https://zcode.z.ai/api/v1/releases/electron/manifest"
                       "?platform=linux-x64&channel=stable")
+OPENCODE_REPO = "sst/opencode"
+CLAUDE_GCS_BASE = ("https://storage.googleapis.com/claude-code-dist-"
+                   "86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases")
+PI_REPO = "earendil-works/pi"
+CODEX_REPO = "openai/codex"
+MAGPIE_REPO = "yetone/magpie-releases"
+CCSWITCH_REPO = "farion1231/cc-switch"
+CODEBUDDY_IDE_API = ("https://copilot.tencent.com/v2/update"
+                     "?platform=ide-linux-x64&version=1.0.0"
+                     "&x-machine-id=default")
 
 USER_AGENT = {"User-Agent": "qvoidz-rpm-packages-spec-bumper"}
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -748,6 +777,219 @@ def sync_zcode(dry_run):
     return f"zcode: {current} -> {version}"
 
 
+def sync_opencode(dry_run):
+    """opencode CLI: GitHub releases (tag v<version>, opencode-linux-x64.tar.gz)."""
+    spec = read_spec("opencode")
+    current = spec_field(spec, "Version")
+    release = latest_release(OPENCODE_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected opencode tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"opencode: up to date ({current})"
+    require_asset(release, "opencode-linux-x64.tar.gz")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{OPENCODE_REPO}/releases/download/"
+                      rf"v{version}/opencode-linux-x64.tar.gz", spec, count=1)
+        write_spec("opencode", bump_spec(
+            "opencode", spec, version, "1%{?dist}",
+            f"Update to upstream opencode {tag}"))
+    CHANGED.append("opencode")
+    return f"opencode: {current} -> {version}"
+
+
+def sync_opencode_desktop(dry_run):
+    """opencode desktop (Electron): same GitHub release as the CLI, but the
+    upstream RPM's own package name is "opencode"; this COPR package is
+    registered as opencode-desktop.
+    """
+    spec = read_spec("opencode-desktop")
+    current = spec_field(spec, "Version")
+    release = latest_release(OPENCODE_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected opencode-desktop tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"opencode-desktop: up to date ({current})"
+    require_asset(release, "opencode-desktop-linux-x86_64.rpm")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{OPENCODE_REPO}/releases/download/"
+                      rf"v{version}/opencode-desktop-linux-x86_64.rpm",
+                      spec, count=1)
+        write_spec("opencode-desktop", bump_spec(
+            "opencode-desktop", spec, version, "1%{?dist}",
+            f"Update to upstream opencode desktop {tag}"))
+    CHANGED.append("opencode-desktop")
+    return f"opencode-desktop: {current} -> {version}"
+
+
+def sync_claude_code(dry_run):
+    """Claude Code: Anthropic's GCS release channel.
+
+    The "stable" pointer file names the version the official native
+    installer ships; the binary lives at <channel>/<version>/linux-x64/claude.
+    """
+    spec = read_spec("claude-code")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(f"{CLAUDE_GCS_BASE}/stable", headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        version = response.read().decode("utf-8", "replace").strip()
+    if not re.fullmatch(r"[0-9][0-9.]*", version):
+        raise RuntimeError(f"Unexpected Claude Code stable version: {version}")
+    if rpm_vercmp(version, current) <= 0:
+        return f"claude-code: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>{CLAUDE_GCS_BASE}/{version}/linux-x64/claude",
+                      spec, count=1)
+        write_spec("claude-code", bump_spec(
+            "claude-code", spec, version, "1%{?dist}",
+            f"Update to upstream Claude Code {version} (stable channel)"))
+    CHANGED.append("claude-code")
+    return f"claude-code: {current} -> {version}"
+
+
+def sync_pi(dry_run):
+    """pi: GitHub releases of earendil-works/pi (tag v<version>,
+    asset pi-linux-x64.tar.gz). The npm package @mariozechner/pi is an
+    unrelated vLLM tool, not this project.
+    """
+    spec = read_spec("pi")
+    current = spec_field(spec, "Version")
+    release = latest_release(PI_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected pi tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"pi: up to date ({current})"
+    require_asset(release, "pi-linux-x64.tar.gz")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{PI_REPO}/releases/download/"
+                      rf"v{version}/pi-linux-x64.tar.gz", spec, count=1)
+        write_spec("pi", bump_spec(
+            "pi", spec, version, "1%{?dist}",
+            f"Update to upstream pi {tag}"))
+    CHANGED.append("pi")
+    return f"pi: {current} -> {version}"
+
+
+def sync_codex(dry_run):
+    """Codex CLI: GitHub releases of openai/codex (tag rust-v<version>,
+    asset codex-x86_64-unknown-linux-musl.tar.gz)."""
+    spec = read_spec("codex")
+    current = spec_field(spec, "Version")
+    release = latest_release(CODEX_REPO)
+    tag = release["tag_name"]
+    match = re.fullmatch(r"rust-v([0-9][\w.]*)", tag)
+    if not match:
+        raise RuntimeError(f"Unexpected codex tag format: {tag}")
+    version = match.group(1)
+    if rpm_vercmp(version, current) <= 0:
+        return f"codex: up to date ({current})"
+    require_asset(release, "codex-x86_64-unknown-linux-musl.tar.gz")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{CODEX_REPO}/releases/download/"
+                      rf"rust-v{version}/codex-x86_64-unknown-linux-musl.tar.gz",
+                      spec, count=1)
+        write_spec("codex", bump_spec(
+            "codex", spec, version, "1%{?dist}",
+            f"Update to upstream Codex {tag}"))
+    CHANGED.append("codex")
+    return f"codex: {current} -> {version}"
+
+
+def sync_magpie(dry_run):
+    """Magpie: GitHub releases of yetone/magpie-releases (tag v<version>,
+    raw binaries magpie-linux-amd64 + magpie-cli-linux-amd64, both required)."""
+    spec = read_spec("magpie")
+    current = spec_field(spec, "Version")
+    release = latest_release(MAGPIE_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected magpie tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"magpie: up to date ({current})"
+    require_asset(release, "magpie-linux-amd64")
+    require_asset(release, "magpie-cli-linux-amd64")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{MAGPIE_REPO}/releases/download/"
+                      rf"v{version}/magpie-linux-amd64", spec, count=1)
+        spec = re.sub(r"(?m)^(Source1:\s*).*$",
+                      rf"\g<1>https://github.com/{MAGPIE_REPO}/releases/download/"
+                      rf"v{version}/magpie-cli-linux-amd64", spec, count=1)
+        write_spec("magpie", bump_spec(
+            "magpie", spec, version, "1%{?dist}",
+            f"Update to upstream Magpie {tag}"))
+    CHANGED.append("magpie")
+    return f"magpie: {current} -> {version}"
+
+
+def sync_ccswitch(dry_run):
+    """ccswitch: GitHub releases of farion1231/cc-switch (tag v<version>,
+    asset CC-Switch-v<version>-Linux-x86_64.rpm). The COPR package is
+    registered as "ccswitch" (spec Name:); the folder stays ccswitch too.
+    """
+    spec = read_spec("ccswitch")
+    current = spec_field(spec, "Version")
+    release = latest_release(CCSWITCH_REPO)
+    tag = release["tag_name"]
+    if not tag.startswith("v"):
+        raise RuntimeError(f"Unexpected ccswitch tag format: {tag}")
+    version = tag[1:]
+    if rpm_vercmp(version, current) <= 0:
+        return f"ccswitch: up to date ({current})"
+    require_asset(release, f"CC-Switch-v{version}-Linux-x86_64.rpm")
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$",
+                      rf"\g<1>https://github.com/{CCSWITCH_REPO}/releases/download/"
+                      rf"v{version}/CC-Switch-v{version}-Linux-x86_64.rpm",
+                      spec, count=1)
+        write_spec("ccswitch", bump_spec(
+            "ccswitch", spec, version, "1%{?dist}",
+            f"Update to upstream CC Switch {tag}"))
+    CHANGED.append("ccswitch")
+    return f"ccswitch: {current} -> {version}"
+
+
+def sync_codebuddy_ide(dry_run):
+    """CodeBuddy IDE: Tencent's update API
+    (copilot.tencent.com/v2/update?platform=ide-linux-x64) returns the
+    version and the full .deb URL on download.codebuddy.cn (domestic
+    channel; the international backend has no Linux configuration).
+    Both Version and Source0 are rewritten on update.
+    """
+    spec = read_spec("codebuddy-ide")
+    current = spec_field(spec, "Version")
+    req = urllib.request.Request(CODEBUDDY_IDE_API, headers=USER_AGENT)
+    with urllib.request.urlopen(req, timeout=60) as response:
+        info = json.load(response)
+    version, url = info["version"], info["url"]
+    if not re.fullmatch(r"[0-9][0-9.]*", version):
+        raise RuntimeError(f"Unexpected CodeBuddy IDE version: {version}")
+    if (not url.startswith("https://download.codebuddy.cn/")
+            or version not in url
+            or not url.endswith(".deb")):
+        raise RuntimeError(f"Unexpected CodeBuddy IDE download URL: {url}")
+    if rpm_vercmp(version, current) <= 0:
+        return f"codebuddy-ide: up to date ({current})"
+    if not dry_run:
+        spec = re.sub(r"(?m)^(Source0:\s*).*$", rf"\g<1>{url}", spec, count=1)
+        write_spec("codebuddy-ide", bump_spec(
+            "codebuddy-ide", spec, version, "1%{?dist}",
+            f"Update to upstream CodeBuddy IDE {version}"))
+    CHANGED.append("codebuddy-ide")
+    return f"codebuddy-ide: {current} -> {version}"
+
+
 def selftest():
     cases = [
         ("0.9.4", "0.9.4", 0),
@@ -803,6 +1045,14 @@ def main():
         ("dingtalk", sync_dingtalk),
         ("telegram-desktop", sync_telegram),
         ("zcode", sync_zcode),
+        ("opencode", sync_opencode),
+        ("opencode-desktop", sync_opencode_desktop),
+        ("claude-code", sync_claude_code),
+        ("pi", sync_pi),
+        ("codex", sync_codex),
+        ("magpie", sync_magpie),
+        ("ccswitch", sync_ccswitch),
+        ("codebuddy-ide", sync_codebuddy_ide),
     ]
     errors = []
     for package, check in checks:

@@ -25,6 +25,14 @@
 | [钉钉](https://www.dingtalk.com/) | 官方 x86_64 .deb 重打包为 RPM |
 | [Telegram Desktop](https://telegram.org/) | 官方 Linux portable tar.xz 原样重打包（GitHub releases/latest 跟踪） |
 | [ZCode](https://zcode.z.ai/) | 智谱 Z.ai 官方 AI 编程工作台，Linux RPM 从发布清单 CDN 重打包 |
+| [opencode](https://opencode.ai/) | SST 的终端 AI 编程代理，官方 Linux x64 二进制（桌面客户端见 opencode-desktop） |
+| [opencode-desktop](https://opencode.ai/) | opencode 官方 Electron 桌面 RPM 重打包（上游包名同为 opencode，故改名共存） |
+| [claude-code](https://code.claude.com/) | Anthropic 官方原生二进制（GCS stable 通道），自带运行时无需 Node.js |
+| [pi](https://pi.dev/) | earendil-works 的极简终端编程代理，官方 Linux x64 tar.gz |
+| [codex](https://developers.openai.com/codex/) | OpenAI Codex CLI，官方静态 musl 二进制 |
+| [Magpie](https://usemagpie.ai/) | 本地 AI 编程代理网关（桌面 + CLI 双二进制），官方 Linux 原样安装 |
+| [ccswitch](https://github.com/farion1231/cc-switch) | Claude Code / Codex 供应商切换器，上游 RPM 重打包 |
+| [CodeBuddy IDE](https://www.codebuddy.ai/) | 腾讯 AI IDE（VSCode 系），官方 .deb 重打包（国际版后端无 Linux 配置，走国内通道） |
 | edge-repo | 装上后即可 `dnf install microsoft-edge-stable` |
 | vscode-repo | 装上后即可 `dnf install code` |
 
@@ -36,7 +44,8 @@ WeTypeX 的专有运行时不在其上游 RPM 内，需按上游说明单独安�
 sudo dnf copr enable qvoidz/rpm-packages
 sudo dnf install wechat workbuddy flclash fcitx5-wetypex flyline linuxqq wemeet iptvnator waydroid-script \
     nerd-fonts-cascadia-code lazyvim zed starship qqmusic wps-office dingtalk \
-    telegram-desktop zcode edge-repo vscode-repo nvim-vim-shim
+    telegram-desktop zcode opencode opencode-desktop claude-code pi codex magpie ccswitch codebuddy-ide \
+    edge-repo vscode-repo nvim-vim-shim
 sudo dnf upgrade   # 日常升级
 ```
 
@@ -79,6 +88,13 @@ COPR 从 spec 构建软件包，本仓库每个目录放一个小的重打包 sp
 | dingtalk | 官方更新 JSON 的版本描述（灰度通道，可能略滞后于实际最新版） |
 | telegram-desktop | Telegram 官方 GitHub `releases/latest`（tag `v<版本>`，资产 `td-setup-linux-x64-<版本>.tar.xz`） |
 | zcode | 智谱 ZCode 更新清单 API（`api/v1/releases/electron/manifest?platform=linux-x64`，YAML 中的版本号 + RPM CDN 地址） |
+| opencode / opencode-desktop | GitHub API `releases/latest`（tag `v<版本>`，资产 `opencode-linux-x64.tar.gz` / `opencode-desktop-linux-x86_64.rpm`） |
+| claude-code | Anthropic GCS 发布通道的 `stable` 指针文件，二进制位于 `<版本>/linux-x64/claude` |
+| pi | GitHub API `releases/latest`（earendil-works/pi，tag `v<版本>`，资产 `pi-linux-x64.tar.gz`） |
+| codex | GitHub API `releases/latest`（openai/codex，tag `rust-v<版本>`，静态 musl 二进制） |
+| magpie | GitHub API `releases/latest`（yetone/magpie-releases，桌面 + CLI 两个裸二进制资产） |
+| ccswitch | GitHub API `releases/latest`（farion1231/cc-switch，tag `v<版本>`，上游 RPM 资产） |
+| codebuddy-ide | 腾讯更新接口 `v2/update?platform=ide-linux-x64`（返回版本号 + .deb 完整地址） |
 
 发现新版本后，工作流自动完成：
 
